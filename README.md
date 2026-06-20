@@ -91,8 +91,9 @@ pnpm dev
 
 Or use the root `Makefile`: `make install`, then `make api-dev` / `make web-dev`.
 
-> **Status:** this is the **backbone (F01)** — the empty pipe boots end-to-end; features (F02–F25)
-> are stubbed with `TODO Fxx` markers. Start with **F02 (freeze `openapi.yaml`)** + **F03 (domain spec)**.
+> **Status:** F01–F05 foundations are implemented: monorepo, frozen API/domain contracts,
+> offline price catalog, and pure intake normalisation. F06–F27 continue the savings layers,
+> adapters, recommendation orchestration, and product UI.
 
 ## Team
 

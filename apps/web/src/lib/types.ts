@@ -121,6 +121,16 @@ export interface Household {
    */
   existing_heatpump_year?: number | null;
   /**
+   * Optional rated thermal output of the existing heat pump in kW.
+   * Overrides the area-method estimate for the Case-B baseline.
+   */
+  existing_heatpump_power_kw?: number | null;
+  /**
+   * Optional measured or nameplate SCOP of the existing heat pump.
+   * Overrides the age-regression fallback for the Case-B baseline.
+   */
+  existing_heatpump_scop?: number | null;
+  /**
    * True if the household already drives an EV.  Changes mobility baseline
    * from fuel cost to public charging cost (§3.2).
    */

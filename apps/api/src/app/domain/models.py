@@ -172,6 +172,24 @@ class Household(BaseModel):
         ),
         examples=[None],
     )
+    existing_heatpump_power_kw: float | None = Field(
+        default=None,
+        gt=0,
+        description=(
+            "Rated thermal output of the existing heat pump in kW. "
+            "Overrides the area-method estimate when supplied."
+        ),
+        examples=[8.0],
+    )
+    existing_heatpump_scop: float | None = Field(
+        default=None,
+        gt=0,
+        description=(
+            "Measured or nameplate SCOP of the existing heat pump. "
+            "Overrides the age-regression fallback when supplied."
+        ),
+        examples=[2.5],
+    )
     existing_ev: bool = Field(
         default=False,
         description=(

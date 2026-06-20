@@ -794,6 +794,26 @@ components:
             modern HP → Layer 3 Δ = 0 (not offered).
           default: null
           example: null
+        existing_heatpump_power_kw:
+          type:
+            - number
+            - "null"
+          exclusiveMinimum: 0
+          description: >
+            Optional rated thermal output of the existing heat pump in kW.
+            Overrides the area-method estimate for the Case-B baseline.
+          default: null
+          example: 8.0
+        existing_heatpump_scop:
+          type:
+            - number
+            - "null"
+          exclusiveMinimum: 0
+          description: >
+            Optional measured or nameplate SCOP of the existing heat pump.
+            Overrides the age-regression fallback for the Case-B baseline.
+          default: null
+          example: 2.5
         existing_ev:
           type: boolean
           default: false
