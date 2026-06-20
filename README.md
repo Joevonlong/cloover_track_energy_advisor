@@ -38,17 +38,61 @@ The advisor picks the configuration that delivers the **largest monthly saving**
 
 ## Tech Stack
 
-> _To be defined during the hackathon_
+| Layer | Choice |
+|-------|--------|
+| Frontend | **Vite + React + TypeScript + Tailwind** SPA · TanStack Query · React Hook Form + Zod |
+| Backend | **FastAPI** (Python 3.12, **uv**) — the only server; hosts the BFF **and** the pure domain core |
+| Data | **Supabase** (Postgres) — reference data, `price_catalog`, runs, proposals |
+| LLM | Provider-agnostic adapter, **Claude** default (explains/sells — **never computes** the number) |
+| Contract | `specs/api/openapi.yaml` → generated TS client (FE) + Pydantic models (BE) |
+
+> **No secret in the frontend bundle** — the only FE env var is `VITE_API_BASE_URL`; all keys live in FastAPI's env.
+
+## Repository structure
+
+```
+apps/
+  api/   FastAPI BFF + pure domain core              ← backend (Zhou) · domain/ (Lukas)
+    src/app/domain/    pure engine: layers 1–4, optimiser, financing   (Lukas)
+    src/app/adapters/  PVGIS · tariff · resolver · site-check · llm     (Zhou)
+    src/app/api/       routes (/recommend, /site-check) · deps          (Zhou)
+    src/app/services/  recommendation orchestration                     (Zhou)
+  web/   Vite + React + TS + Tailwind SPA             ← frontend (Philips)
+    src/features/      intake · configurator · dashboard · proposal
+specs/   frozen contract (openapi.yaml = F02) + domain math spec (F03)
+docs/    design_plan/system_workflow.md (blueprint) · feature_track/ (specs, backlog, timeline)
+```
+
+> **Who builds what & when:** see [`docs/feature_track/`](docs/feature_track/) — the feature backlog,
+> the spec-based process, and the build timeline. Each module below is stubbed and tagged with its
+> owner + feature ID (e.g. `TODO F06 (Lukas)`).
 
 ## Getting Started
 
+This is a monorepo with two apps. Run the backend and frontend in two terminals.
+
 ```bash
-# clone
 git clone git@github.com:Joevonlong/heimwende-energy-advisor.git
 cd heimwende-energy-advisor
 
-# install & run (update once stack is chosen)
+# 1) Backend — FastAPI on http://localhost:8000
+cd apps/api
+cp .env.example .env            # fill keys later; the skeleton boots without them
+uv sync
+uv run uvicorn app.main:app --app-dir src --reload --port 8000
+#   check: curl http://localhost:8000/health  →  {"status":"ok",...}
+
+# 2) Frontend — Vite on http://localhost:5173  (new terminal)
+cd apps/web
+cp .env.example .env            # VITE_API_BASE_URL=http://localhost:8000
+pnpm install
+pnpm dev
 ```
+
+Or use the root `Makefile`: `make install`, then `make api-dev` / `make web-dev`.
+
+> **Status:** this is the **backbone (F01)** — the empty pipe boots end-to-end; features (F02–F25)
+> are stubbed with `TODO Fxx` markers. Start with **F02 (freeze `openapi.yaml`)** + **F03 (domain spec)**.
 
 ## Team
 
