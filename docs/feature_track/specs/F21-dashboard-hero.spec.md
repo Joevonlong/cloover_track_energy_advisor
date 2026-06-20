@@ -166,3 +166,13 @@ Today €435/mo → with the bundle €Z/mo
 - `docs/design_plan/system_workflow.md` §9 (dashboard hero, the big number, honest curve, before/after, the sketch), §6.5 (monthly_saving / saving_after_payoff / break_even_month), §8 / §8.1 (worked example, honest early ≈0/negative), §15 (don't overstate the number).
 - `specs/api/openapi.yaml` (F02 — `ScenarioResult.monthly_saving_eur`, `saving_after_payoff_eur`, `break_even_month`, `Recommendation.current_monthly_spend_eur`) · `specs/domain/savings-engine.spec.md` (F11 financing it renders).
 - Backlog `FEATURE_BACKLOG.md` §3 E3 row F21 (the big €/month number + honest two-phase curve), §5 (§9 traceability).
+
+## Round 3 additions (v0.4)
+
+R-E (§9, FEATURE_BACKLOG §2.1): surface capex, installment, and break-even directly in the hero area for each selected configuration — including partial configs (e.g. solar-only) — framed Check24-style in Cloover's interest (lead with the saving, show cost after).
+
+- **Cost summary row** — near the headline saving, render a compact row: "Total investment: €<`capex_after_subsidy_eur`> after subsidies · ≈ €<`installment_eur_month`>/mo financing". Both values are read from the selected `ScenarioResult` fields (`capex_after_subsidy_eur` and `installment_eur_month`) — F21 computes nothing new; the engine (F11) already emits these (§6.5, §14.1).
+- **Break-even call-out** — display a distinct, persuasive chip next to the two-phase curve: "You're in profit after <`break_even_month`> months (≈ <years>)" — framed as *"in profit after X months — worth financing"* per §9 R-E framing rule. Derives from `ScenarioResult.break_even_month`; months → "X yrs Y mo" conversion is a pure display transform (no engine call).
+- **Partial-config framing** — when the selected rung is solar-only (net −€24/mo), the cost summary and break-even chip stay visible but the break-even chip switches to an up-sell mode: "Add heat pump + EV to reach +€120/mo from day one" (sourced from `Recommendation.upsell`, already in the contract), so the negative rung is never a dead end visually.
+- **Framing order** — per §9 R-E: display gross saving → installment → net saving → break-even. Never lead with the capex figure; the installment is the secondary line, the saving is always the headline.
+- **AC addendum** — extend AC6 (solar-only negative): assert that the cost summary row and break-even chip still render for the −€24/mo solar-only rung and display the up-sell hook.

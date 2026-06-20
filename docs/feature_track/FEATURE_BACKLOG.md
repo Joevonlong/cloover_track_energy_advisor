@@ -1,7 +1,7 @@
 # Feature Backlog — Heimwende Energy Advisor (Cloover track)
 
 > **Canonical source of truth for feature IDs, owners, dependencies and MVP scope.**
-> Derived 1:1 from [`system_workflow.md`](../design_plan/system_workflow.md) v0.3.1. If this file and a
+> Derived 1:1 from [`system_workflow.md`](../design_plan/system_workflow.md) v0.4. If this file and a
 > per-feature spec disagree on ID/owner/dep, **this file wins** — fix the spec.
 > Deadline **Sun 2026-06-21 14:00**. North Star: `monthly_saving = current_spend − (installment + new_energy_cost)`.
 
@@ -16,8 +16,8 @@ Legend — **Owner:** 🟦 Zhou (backend/adapters/contract) · 🟩 Lukas (domai
 
 | Person | Primary surface | Owns features | Also |
 |--------|-----------------|---------------|------|
-| **Lukas** 🟩 | **Pure domain core** (`apps/api/src/app/domain/`) + **data-source verification** + the §10/§12 reference values | F03, F05–F11 | **Reviews every PR** (review gate); signs off all numbers/sources |
-| **Zhou** 🟦 | **Backend BFF**: FastAPI, adapters, Supabase, the OpenAPI contract, persistence, fixtures | F01, F02, F04, F12–F17, F24(be) | Owns contract changes |
+| **Lukas** 🟩 | **Pure domain core** (`apps/api/src/app/domain/`) + **data-source verification** + the §10/§12 reference values | F03, F05–F11, **F27** | **Reviews every PR** (review gate); signs off all numbers/sources |
+| **Zhou** 🟦 | **Backend BFF**: FastAPI, adapters, Supabase, the OpenAPI contract, persistence, fixtures | F01, F02, F04, F12–F17, **F26**, F24(be) | Owns contract changes |
 | **Philips** 🟪 | **Frontend**: Vite SPA, intake, configurator, dashboard, charts, proposal | F18–F23, F24(fe) | Owns demo UX feel |
 
 > Split rationale: **domain math (Lukas) ⟂ backend plumbing (Zhou) ⟂ UI (Philips)** are three nearly
@@ -37,6 +37,26 @@ Legend — **Owner:** 🟦 Zhou (backend/adapters/contract) · 🟩 Lukas (domai
 | D7 | Denkmal / permits | **OSM + national checkbox**; Bavaria live WFS = 🔶 | §4 |
 | D8 | LLM provider | **Claude default**, provider-agnostic adapter | OpenAI fallback (§1) |
 | ⚠️ **D9** | **Financing APR / term** | **DEFAULT 5 % / 180 mo — TBC: confirm Cloover's real product** | the one genuine unknown; flagged in UI + F11 spec. **Ask a Cloover mentor early.** |
+| **D10** | **Subsidies storage** | **DB `subsidy_catalog`** — official-sourced, cited (`source_url`+`valid_from`), periodic refresh; never hard-coded | MVP seeded+cited; auto-refresh 🔶 (§12.1) — **F26** |
+| **D11** | **Results = 3 strategies** | **Optimal** (full bundle) · **Fastest-payback** (cheapest/earliest profit) · **Long-term** (decades impact), Check24 cards | **Optimal = default CTA** (§6.6, §9) — **F27** + F22 |
+| **D12** | **Existing-equipment specs** | collect PV `kWp` · battery `kWh` · HP year + **optional `power_kW`/`SCOP`**; capex on **delta only** | §3.2 — F02/F05/F08/F19 |
+
+## 2.1 Round 3 — customer supplementary requirements (landed)
+
+New customer asks folded into `system_workflow.md` **v0.4** §0. Each maps to a **new** or **extended** feature:
+
+| Ask | Requirement | Disposition | Feature(s) |
+|-----|-------------|-------------|-----------|
+| **R-A** | Customer declares already-owned PV/battery/HP/EV + **specs** (kWp/kWh/HP power·SCOP) → used in the calc | mostly built (§3.2); add spec collection + optional existing-HP `power_kW`/`SCOP` | extend **F02, F05, F08, F19** |
+| **R-B** | Best-combination advice using **all** data (subsidies, all layers, tariff, self-consumption, grid fee, irradiance) | built (optimiser + advisor); emphasis + name the drivers | **F10, F16** |
+| **R-C** | Subsidies from **official legal source → DB → periodic update → cite sources** | **NEW** `subsidy_catalog` (seeded+cited; auto-refresh 🔶) | **F26** (new) + F11, F04 |
+| **R-D** | Show **3 options**: optimal · fastest-payback (cheapest) · long-term | **NEW** three-strategy optimiser + contract + UI cards | **F27** (new) + F02, F22 |
+| **R-E** | Dashboard: **cost per combination + break-even duration**, Check24-persuasive, in Cloover's interest | extend dashboard (data already in payload) | extend **F21, F22** |
+| **R-F** | **Permit layer** | already built as Site-Check (§4); confirm + permits panel | **F15, F23** |
+
+> The two genuinely **new** features are **F26** and **F27**; the rest are **extensions** to existing specs
+> (each affected spec carries a "Round 3 additions" block). F02 takes a **reviewed contract bump**
+> (`strategies[]` + optional existing-HP fields) — it is no longer frozen-final, per PROCESS §6.
 
 ## 3. Epics → features (the breakdown)
 
@@ -59,7 +79,8 @@ Legend — **Owner:** 🟦 Zhou (backend/adapters/contract) · 🟩 Lukas (domai
 | **F08** | **Layer 3 — Heat pump**: Case A fossil→HP, Case B old-HP→efficiency upgrade, SCOP, PV overlap, KfW nuance | 🟩 | ✅ | P2 | F05 | §5.3, §3.2 |
 | **F09** | **Layer 4 — EV charger**: Case A petrol→EV, Case B EV-without-charger (charging-cost swap), blended price, street-only fallback | 🟩 | ✅ | P2 | F05 | §5.4, §3.2 |
 | **F10** | **Configurator marginals + optimiser + up-sell** — cumulative ladder sums exactly to headline; pick max-net rung; up-sell diff | 🟩 | ✅ | P3 | F06,F07,F08,F09 | §6.1–§6.4 |
-| **F11** | **Financing overlay + confidence** — annuity, KfW 458, 0 % VAT, break-even month, ±band + biggest-driver, sensitivity | 🟩 | ✅ | P3 | F10 | §6.5, §7 |
+| **F11** | **Financing overlay + confidence** — annuity, KfW 458, 0 % VAT, break-even month, ±band + biggest-driver, sensitivity; **reads `subsidy_catalog` (F26)** | 🟩 | ✅ | P3 | F10 | §6.5, §7, §12.1 |
+| **F27** | **Three-strategy recommendation** *(Round 3, R-D)* — `recommend()` returns **Optimal** (full bundle) · **Fastest-payback** (earliest break-even / best ROI) · **Long-term** (max lifetime / decades impact), each a scenario + label + rationale | 🟩 (rev 🟦) | ✅ | P3 | F10,F11 | §6.6, §9, §14.1 |
 
 ### E2 — Backend Adapters & Services  *(Zhou · all I/O lives here)*
 
@@ -71,6 +92,7 @@ Legend — **Owner:** 🟦 Zhou (backend/adapters/contract) · 🟩 Lukas (domai
 | **F15** | **Site-Check adapter** — permits/feasibility flags, OSM parking, Denkmal checkbox, MaStR neighbour-count seed | 🟦 | ✅ (lite) | P2 | F12 | §4, §14.2 |
 | **F16** | **LLM advisor adapter** — Claude prose-only (rationale + up-sell + installer proposal copy) + **number-assertion guard** | 🟦 | ✅ | P3 | F02 | §1, §9, §15 |
 | **F17** | **API endpoints** `/recommend` + `/site-check` — wire resolver→engine→persistence; `?fixture` determinism | 🟦 | ✅ | P3 (F17a skeleton→P1) | F02,F11,F12 | §14.1, §14.2 |
+| **F26** | **Subsidy catalog** *(Round 3, R-C)* — `subsidy_catalog` table (KfW 458 · BAFA · 0 % VAT · opt. Länder), **official-sourced + cited (`source_url`, `valid_from`)**, periodic refresh; resolver injects `SubsidyContext` into financing (F11) | 🟦+🟩 | ✅ (auto-refresh 🔶) | P2 | F04 | §12.1, §6.5, §11 |
 
 ### E3 — Frontend  *(Philips · Vite SPA, mock-first against the frozen contract)*
 
@@ -90,7 +112,7 @@ Legend — **Owner:** 🟦 Zhou (backend/adapters/contract) · 🟩 Lukas (domai
 | **F24** | **End-to-end integration + demo determinism** — wire FE↔BE, seed offline, `?fixture` golden payloads, 90-sec happy path green | 🟦+🟪 (rev 🟩) | ✅ | P4 | F17,F22 | §9, §15 |
 | **F25** | **Submission pack** — README (setup/run), 2-min Loom demo, pitch deck (5 slides), public repo, API/tooling docs | All | ✅ | P5 | F24 | HACKATHON_MANUAL §Submission |
 
-**Counts:** 25 features · **MVP-critical: 23** · **2 stretch features** (F13, F14 — both have ✅ MVP fallbacks already shipping in F06/F04/F07) · **2 stretch sub-scopes** (conversational intake in F19, PDF export in F23).
+**Counts:** **27 features** (F01–F27) · **MVP-critical: 25** · **2 stretch features** (F13, F14 — both have ✅ MVP fallbacks already shipping in F06/F04/F07) · stretch sub-scopes: conversational intake (F19), PDF export (F23), **subsidy auto-refresh (F26)**, à-la-carte (D3). *F26 + F27 added in Round 3 (§2.1).*
 
 ## 4. Dependency graph (critical path in **bold**)
 
@@ -121,7 +143,7 @@ F03 → F05 → F06 → F10 → F11 (engine) → F17. Protect these; everything 
 | §1 | Tech stack, no-secrets, BFF, determinism | F01, F02, F18, F24 |
 | §2 | End-to-end pipeline | F12→F17 (be), F05–F11 (engine), F24 |
 | §3.1 | Mandatory intake fields | F05, F19, F02 |
-| §3.2 | Existing-equipment paths + offer matrix | F05, F08, F09, F20 |
+| §3.2 | Existing-equipment paths + offer matrix + **specs (R-A)** | F02, F05, F08, F09, F19, F20 |
 | §3.3 | Mobility km-based €→km | F05, F19 |
 | §3.4 | Progressive-disclosure UX | F19, F23 |
 | §4 | Site-Check permits/obligations | F15, F23 |
@@ -133,7 +155,8 @@ F03 → F05 → F06 → F10 → F11 (engine) → F17. Protect these; everything 
 | §6.2 | Cumulative interaction (why bigger=bigger saving) | F10 (engine), F22 (UI proof) |
 | §6.3 | Dependency & toggle rules | F10, F20 |
 | §6.4 | Optimiser & up-sell | F10, F22 |
-| §6.5 | Financing overlay + subsidies (KfW/VAT/BAFA) | F11, F04 |
+| §6.5 | Financing overlay + subsidies (KfW/VAT/BAFA) | F11, F04, F26 |
+| §6.6 | **Three recommended strategies** (optimal/fastest/long-term) | F27, F22, F02 |
 | §7 | Savings certainty (4 drivers) | F11 (band), F13 (irradiance), F14 (tariff), F08/§7 subsidies |
 | §7.1 | Dynamic-tariff model | F14, F07, F09 |
 | §8 / §8.1 | Worked example + battery ≈€0 derivation | F03 (vectors), F07, F10 |
@@ -141,6 +164,7 @@ F03 → F05 → F06 → F10 → F11 (engine) → F17. Protect these; everything 
 | §10 | Reference dataset (constants + "used in") | F03, F04, F12 |
 | §11 | Data sources (PVGIS/SMARD/OSM/Denkmal/MaStR/KfW/Anthropic) | F12, F13, F14, F15, F16 |
 | §12 | `price_catalog` DB-driven pricing | F04, F12 |
+| §12.1 | **`subsidy_catalog`** (official-sourced, cited, periodic) | F26, F11, F04 |
 | §13 | Resource lists (comprehensive + optimal) | F04, F12, F13, F14 (selection realised) |
 | §14.1 | `/recommend` contract | F02, F17 |
 | §14.2 | `/site-check` contract | F02, F15, F17 |
@@ -168,7 +192,7 @@ F03 → F05 → F06 → F10 → F11 (engine) → F17. Protect these; everything 
 
 ## 7. How to read this with the other docs
 
-- **What to build & why** → `../design_plan/system_workflow.md` (the blueprint, v0.3.1).
+- **What to build & why** → `../design_plan/system_workflow.md` (the blueprint, v0.4).
 - **How/when each person works** → [`TIMELINE.md`](./TIMELINE.md) (phases P0–P5 + swimlanes).
 - **The process & gates** → [`PROCESS.md`](./PROCESS.md).
 - **Each feature's detail** → [`specs/Fxx-*.spec.md`](./specs/) (one per row above, from `_TEMPLATE.spec.md`).

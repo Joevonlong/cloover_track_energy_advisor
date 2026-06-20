@@ -134,8 +134,18 @@ for figure in extract_euro_figures(explanation_md ++ proposal_copy_md ++ upsell.
 - [ ] Reviewed by Lukas; merged to `main`; main is green.
 - [ ] Demo happy-path still works (templated fallback) after merge.
 
+## Round 3 additions (v0.4)
+
+_The advisor paragraph must name the dominant drivers (R-B, §6.4) and explain the three strategies (R-D, §6.6) when present — still prose-only, every € asserted against the payload._
+
+- **Name the dominant drivers (R-B, §6.4)**: the advisor's first output sentence must explicitly identify which signal(s) drove the recommendation — e.g. *"Ihr hoher Benzinverbrauch macht Layer 4 zum größten Sparhebel; die Batterie schaltet volle Eigenverbrauch frei, sobald die Wärmepumpe hinzukommt."* The prompt must instruct the LLM to cite the dominant driver provided by F10 (`dominant_driver` field) and at least two of the six all-data signals (four layer buckets, tariff spread, irradiance) in the rationale. The number-assertion guard still applies to every € cited.
+- **Explain the three strategies when present (R-D, §6.6)**: when `Recommendation.strategies[]` is non-empty (F27), the advisor must also generate a short rationale for each of the three named strategies — Optimal, Fastest-payback, Long-term — as `Strategy.rationale` strings. Each rationale must be prose-only (no new computation), cite the `break_even_month` and `monthly_saving_eur` from the strategy's `ScenarioResult`, and pass the number-assertion guard individually.
+- **Allowed figures expanded**: the guard's `allowed` set must now include `strategy.scenario.monthly_saving_eur`, `strategy.scenario.break_even_month`, and `strategy.scenario.capex.after_subsidy_eur` for each of the three strategies, so rationale strings citing these values pass cleanly.
+- **New AC** (AC8 — named drivers): given the §8 payload (EV is the dominant saver), when the advisor runs, then `explanation_md` contains a sentence identifying the dominant driver and cites at least one of the six all-data signals by name; (AC9 — strategy rationales): given `strategies[]` with three items, then each `Strategy.rationale` is non-empty prose that passes the number-assertion guard.
+
 ## 11. References
 
 - `docs/design_plan/system_workflow.md` §1 (provider-agnostic, Claude default, no secrets, never computes), §9 (Claude paragraph in the dashboard), §15 (LLM never computes; assert every figure matches the payload), §6.4 (up-sell), §14.1/§14.3 (`Recommendation` payload, `proposal`), §11 (Anthropic source, key server-side), §16 D8.
-- Backlog `FEATURE_BACKLOG.md` §3 E2 row F16, §5 §1/§9/§15 traceability, §2 D8, §6 (LLM-invents-a-number risk).
+- `docs/design_plan/system_workflow.md` **§6.4** (R-B — all-data advice, name the dominant driver), **§6.6** (R-D — three-strategy rationale strings, each prose-only and guard-checked).
+- Backlog `FEATURE_BACKLOG.md` §3 E2 row F16, §5 §1/§9/§15 traceability, §2 D8, §6 (LLM-invents-a-number risk), **§2.1 R-B + R-D**.
 - `specs/api/openapi.yaml` (F02) · `specs/domain/savings-engine.spec.md` (F03 — the payload it formats).

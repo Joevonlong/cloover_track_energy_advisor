@@ -138,8 +138,18 @@ Battery install      → 🟢 indoor, verfahrensfrei
 - [ ] Reviewed by Lukas; merged to `main`; main is green.
 - [ ] Demo happy-path still works **offline** (seeded Denkmal/MaStR, checkbox parking) after merge.
 
+## Round 3 additions (v0.4)
+
+_F15 is formally designated the product's permit layer (R-F, §4); its output is surfaced in the dashboard permits panel (F23)._
+
+- **F15 IS the permit layer** (R-F, §4): add an explicit leading statement to F15's implementation that this component is the product's sole permit layer, not a supporting check. It covers the full scope listed in §4: roof/PV verfahrensfrei, Denkmalschutz gate, GEG §71 compliance, WEG §20 / BGB §554 EV right, grid registration (≤11 kW notify / >11 kW approval), and battery MaStR registration.
+- **Surfaced in the dashboard permits panel (F23)**: the `feasibility_flags[]` produced by F15 are the direct data source for the permits panel in F23. Each `FeasibilityFlag{ product, check, status, message }` maps to a ✓ / ⚠ / 🟡 chip in the UI. F15 must produce one flag per §4 row — no §4 check may be silently omitted from the response.
+- **Full permit scope enumerated**: the six permit areas (roof/PV verfahrensfrei 🟢, Denkmalschutz gate 🟡, GEG §71 🟢, WEG/§554 BGB EV right 🟢, grid registration ℹ️, battery MaStR ℹ️) must each produce a flag in the `SiteCheckResponse`, even when the rule is hardcoded-green. This guarantees F23's permits panel always shows all six rows.
+- **New AC** (AC8): given any valid `Household` input, when site-checked, then `feasibility_flags[]` contains exactly one entry per §4 row (six permit areas enumerated above) with no row missing, covering the full R-F scope — regardless of whether the flag is 🟢, 🟡, or ℹ️.
+
 ## 11. References
 
 - `docs/design_plan/system_workflow.md` §4 (permit/obligation table, GEG timeline, data reality), §14.2 (`/site-check` contract), §11 (OSM/Denkmal/MaStR sources, keyless), §5.4 (street-only → L4), §3.4 (never block), §13.2 (offline selection), §15 (Denkmal/MaStR not national), §16 D7.
-- Backlog `FEATURE_BACKLOG.md` §3 E2 row F15 (✅ lite), §5 §4/§14.2 traceability, §2 D7.
+- `docs/design_plan/system_workflow.md` **§4** (R-F — "Site-Check IS the permit layer", permits panel, full six-area scope), **§9** (permits panel surfaced in the dashboard).
+- Backlog `FEATURE_BACKLOG.md` §3 E2 row F15 (✅ lite), §5 §4/§14.2 traceability, §2 D7, **§2.1 R-F**.
 - `specs/api/openapi.yaml` (F02 `/site-check`) · F04 (`denkmal_seed`/`mastr_seed`) · F17 (endpoint plumbing).

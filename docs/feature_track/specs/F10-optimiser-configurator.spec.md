@@ -136,7 +136,17 @@ pump and EV displace."*). Canonical-order marginals **sum exactly** to the headl
 - [ ] Reviewed by **Zhou** (independent, per frontmatter — contract-touching domain feature owned by Lukas); merged to `main`; main is green.
 - [ ] The demo happy-path still works end-to-end after merge.
 
+## Round 3 additions (v0.4)
+
+_Two extensions: (1) all-data consumption mandate (R-B, §6.4); (2) F10 becomes the upstream that feeds F27's three-strategy selection (R-D, §6.6)._
+
+- **All-data consumption (R-B, §6.4)**: before selecting and explaining a pick, the optimiser must have consumed every signal it has: all four layer bucket outputs (electricity, heating, mobility €/mo on the running state); applicable subsidies read from `SubsidyContext` (F26) — rate, cap, `source_url`; dynamic-tariff spread (SMARD / seeded) for arbitrage and EV scheduling values; self-consumption ratio (load-aware autarky factor, lifted by each layer); per-PLZ grid-fee overlay (from `reference_plz`); and local irradiance (`PVGIS E_y` or specific-yield fallback). Missing any signal is a correctness gap, not a stretch.
+- **Feeds F27 (three-strategy selection)**: F10's evaluated four-rung ladder and the per-rung `monthly_saving_eur` / `break_even_month` values are the **input** to F27's `recommend()` strategy selection. F10 must expose the full ladder (not just the `best` rung) so F27 can identify Optimal, Fastest-payback, and Long-term without re-evaluating (§6.6, §14.1).
+- **Named dominant-driver output**: alongside the `upsell` struct, emit a `dominant_driver` string naming the largest single-signal contributor (e.g. `"high petrol spend → Layer 4 biggest saver"`). This feeds the LLM advisor's required transparency sentence (F16/R-B, §6.4) and the confidence chip.
+- **New AC** (AC8): given the §8 household, when `recommend()` runs, then the result includes evidence that all six signals (four layer buckets + tariff spread + irradiance) were consumed — asserted via the populated `dominant_driver` and the `assumptions[]` entries for each signal source.
+
 ## 11. References
 
 - `docs/design_plan/system_workflow.md` §6.1, §6.2, §6.3, §6.4, §3.2, §8, §14.1
+- `docs/design_plan/system_workflow.md` **§6.4** (R-B — all-data mandate: four layers + subsidies + tariff + self-consumption + grid fee + irradiance), **§6.6** (F10 ladder feeds F27 three-strategy selection).
 - `specs/api/openapi.yaml` (`Recommendation`, `ScenarioResult`, `alternatives[]`, `upsell`) · `specs/domain/savings-engine.spec.md` (§8 vectors via F03)

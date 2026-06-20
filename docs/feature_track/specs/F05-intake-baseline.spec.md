@@ -173,7 +173,17 @@ Base-load reconstruction: `annual_consumption_kwh = electricity_eur_month × 12 
 - [ ] Reviewed by Lukas; merged to `main`; main is green.
 - [ ] Demo happy-path still works end-to-end after merge.
 
+## Round 3 additions (v0.4)
+
+_Extends existing-equipment folding to consume the new optional HP spec fields (R-A, §3.2). No new I/O; all pure-domain._
+
+- **Consume `existing_heatpump_power_kw` and `existing_heatpump_scop`** (R-A, §3.2): when these optional fields are present on the `Household` DTO, fold them into the normalised existing-equipment state alongside `existing_heatpump_year`. Carry them forward so F08 can access them in the Case-B baseline path.
+- **Assumption labelling for optional HP specs**: if either field is absent, emit a labelled `Assumption` noting the default that will be used (`old_SCOP = 2.8` from age-regression or constant; HP size from area-method). If the user provides them, flag `source="user"` and note they tighten the Case-B confidence band (§3.2, §3.4).
+- **Capex on delta only, credit on incremental only**: reaffirm the §3.2 delta principle — when an existing HP is declared, capex is charged only on the added new unit; the Case-B saving credits only the *incremental* running-cost reduction (old SCOP → new SCOP), never the full heating baseline. No double-count regardless of whether optional SCOP/power fields are supplied.
+- **New AC** (AC8): given `existing_heatpump_power_kw = 8.0` and `existing_heatpump_scop = 2.5`, when normalised, then the state carries both values, each is flagged `source="user"`, and an `Assumption` confirms they will override the area-method HP size and the `old_SCOP = 2.8` default in F08.
+
 ## 11. References
 
 - `docs/design_plan/system_workflow.md` §3.1, §3.2, §3.3, §3.4, §8, §10, §12
+- `docs/design_plan/system_workflow.md` **§3.2** (R-A — `existing_heatpump_power_kw`/`existing_heatpump_scop` optional fields and the delta principle).
 - `specs/api/openapi.yaml` · `specs/domain/savings-engine.spec.md` (F03)

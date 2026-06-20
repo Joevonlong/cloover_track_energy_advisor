@@ -1,6 +1,6 @@
 # System Workflow — Heimwende Energy Advisor (Cloover track)
 
-> **Status:** optimised, source-verified, feedback-applied · **v0.3.1** · 2026-06-20
+> **Status:** optimised, source-verified, feedback-applied · **v0.4** · 2026-06-20
 > **Source of truth:** [`specs/`](../../specs/) wins over this doc. This file is the *executable
 > blueprint* tying the [master plan](./heimwende-master-plan.md), the [domain spec](../../specs/domain/savings-engine.spec.md)
 > and the frozen [`openapi.yaml`](../../specs/api/openapi.yaml) into one pipeline, with every data
@@ -20,7 +20,33 @@
 
 ## 0. What changed
 
-### Round 2 (v0.3.1 — this pass): upgrade-condition edge cases
+### Round 3 (v0.4 — this pass): customer supplementary requirements
+
+Six requirements added from customer brief; no existing section renumbered:
+
+- **R-A — Existing-equipment specs** (§3.2): intake now accepts per-device specs (PV `kWp`, battery
+  `kWh`, heat-pump install year + new optional `power_kW`/`SCOP`, EV present, charger present).
+  Capex is charged on the **delta only**; only **incremental** generation/saving is credited.
+  Optional `power_kW`/`SCOP` fields added to the §3.2 table; they refine the Case-B HP baseline (§5.3).
+- **R-C — Subsidy catalog** (§12.1 new): subsidies (KfW 458, BAFA EV status, 0 % VAT, Länder
+  optional) are now read from a **`subsidy_catalog` DB table** — never hard-coded. Each row carries a
+  `source_url` + `valid_from` date; the engine cites the source per subsidy via `assumptions[]` /
+  `subsidy_note`. A periodic-refresh mechanism is described.
+- **R-D — Three recommended strategies** (§6.6 new): `recommend()` now returns three named strategies
+  over the ladder — **Optimal**, **Fastest payback**, and **Long-term** — each as a scenario + label +
+  one-line rationale. `Recommendation` API gains a `strategies` field; dashboard (§9) shows them as
+  three comparable Check24-style option cards.
+- **R-E — Dashboard costs + break-even** (§9 extended): each recommended combination (and partial
+  configs like solar-only) now shows capex after subsidy, monthly installment, **and** the financing
+  duration to break-even (months/years until cumulative net ≥ 0), framed persuasively Check24-style.
+- **R-F — Site-Check IS the permit layer** (§4 clarified): added a leading statement that the
+  Site-Check pre-step is the product's **permit layer**, covering roof/PV, Denkmalschutz, GEG,
+  WEG/§554 BGB, grid registration, and battery MaStR — surfaced in the dashboard permits panel.
+- **R-B — All-data advice** (§6.4 extended): the recommendation engine must use every computed signal
+  (all four layers, subsidies, dynamic tariff, self-consumption, grid fees, irradiance) and the LLM
+  advisor must explain the pick citing each driver.
+
+### Round 2 (v0.3.1): upgrade-condition edge cases
 
 The four layers each now cover the *realistic* household states, not just the clean fossil case:
 
@@ -128,10 +154,18 @@ never computes).
 | Field | Default | Effect on the ladder |
 |---|---|---|
 | `existing_pv_kwp` | 0 | If > 0: Layer 1 adds capacity only up to roof cap; **capex on the added kWp only**; production on **total** installed; the current bill already reflects existing self-consumption, so Layer 1 credits only the *incremental* generation (no double-count). If existing PV already covers the need, the ladder effectively **starts at Layer 2**. |
-| `existing_battery_kwh` | 0 | If > 0: Layer 2 adds only the delta; arbitrage + self-consumption on **total** battery. |
+| `existing_battery_kwh` | 0 | If > 0: Layer 2 adds only the delta; arbitrage + self-consumption on **total** battery. **Capex on the added kWh only.** |
 | `existing_heatpump_year` | null | `null` ⇒ no HP (fossil case). If set: an HP exists. **Old/inefficient** (age ≥ 12 yrs *or* est. SCOP < 3.0) ⇒ Layer 3 becomes an **efficiency-upgrade** offer (replace with a state-of-the-art high-SCOP unit, §5.3 Case B). **Modern/efficient** ⇒ Layer 3 Δ = 0 (not offered). |
+| `existing_heatpump_power_kw` | null (optional) | **New — R-A.** Rated thermal output of the existing HP in kW. Overrides the area-method HP size estimate when present; tightens the Case-B heat-demand back-calculation and confidence band. |
+| `existing_heatpump_scop` | null (optional) | **New — R-A.** Measured or nameplate SCOP of the existing HP. When provided, replaces the default `old_SCOP = 2.8` in the Case-B baseline (§5.3), giving a more accurate efficiency-delta saving. Also updates the `old/inefficient` threshold check (SCOP < 3.0). |
 | `existing_ev` | false | `true` ⇒ the household already drives electric (mobility baseline is *charging cost*, not fuel). |
 | `existing_ev_charger` | false | `true` ⇒ a home wallbox exists. **EV + no charger** ⇒ Layer 4 becomes a **charger-only** offer (cheap home charging vs expensive public, §5.4 Case B). **EV + charger** ⇒ Layer 4 Δ = 0. |
+
+**Delta principle (applies to all five rows above):** owned equipment is part of the household's
+*current running state*, so (a) capex is charged **only on the incremental delta** added by the layer,
+(b) savings credit **only the incremental generation or cost reduction** beyond what the existing
+equipment already delivers — no double-counting. The configurator renders owned items as
+**"already installed ✓ — no capex"**.
 
 **Layer-offer matrix (which state unlocks which layer):**
 
@@ -146,8 +180,8 @@ never computes).
 | EV + home charger | — | ⛔ Δ = 0 |
 | No car (NONE) | — | ⛔ Δ = 0 |
 
-The configurator (§6/§9) renders owned items as **"already installed ✓ — no capex"**, so the saving is
-never inflated by charging for hardware the household already has.
+The two new optional HP spec fields (`power_kW`, `SCOP`) narrow the confidence band on the Case-B
+(old-HP→efficiency-upgrade) baseline in §5.3 — the Case-B comment there notes exactly how they are used.
 
 ### 3.3 Mobility is km-based
 
@@ -176,6 +210,11 @@ the result on missing data — degrade to defaults and flag uncertainty.
 ---
 
 ## 4. Pre-step — Site-Check: permits & obligations (nationally correct)
+
+> **R-F — Site-Check IS the permit layer.** This pre-step is the product's permit layer, surfaced in
+> the dashboard permits panel (§9). It covers: roof/PV permit (verfahrensfrei), Denkmalschutz gate,
+> GEG §71 compliance, WEG/§554 BGB EV right, grid registration (≤11 kW notify / >11 kW approve), and
+> battery MaStR registration. All results appear as ✓/⚠/🟡 chips in the permits panel.
 
 > In 2026 German law *privileges* renewables (EEG §2). Roof-PV, air-source heat pumps and wallboxes
 > are **verfahrensfrei** (no building permit) in essentially every Land's building code. Site-Check is
@@ -276,7 +315,13 @@ only in the *baseline* they replace and the *subsidy* available.
 #     heat_demand_kwh = (heating_eur_month × 12 / fuel_unit_price) × boiler_efficiency × calorific
 #   Case B (old HP): back out demand from the old unit's electricity:
 #     heat_demand_kwh = (heating_eur_month × 12 / retail_price) × old_SCOP
-#       old_SCOP ≈ 2.8 default (age ≥ 12 yrs / pre-2014 air-source); refine from existing_heatpump_year
+#       old_SCOP priority order:
+#         1. existing_heatpump_scop   (R-A — user-provided, most accurate)
+#         2. age-regression table(existing_heatpump_year)  → 2.8 default (≥12 yrs / pre-2014)
+#     If existing_heatpump_power_kw given (R-A): cross-check/override the area-method HP size estimate
+#       required_kW = existing_heatpump_power_kw   (skips area × heat-load lookup)
+#     "old/inefficient" threshold: SCOP < 3.0 OR age ≥ 12 yrs; if existing_heatpump_scop provided,
+#       the SCOP check uses the user value directly (may lower or raise the threshold).
 #   Fallback for either (area method, uses floor_area + building_year):
 #     heat_load_W_m2 = lookup(building_year)  # §10 table
 #     required_kW = ceil_to(6/8/.../16, heat_load_W_m2 × floor_area_m2 / 1000)
@@ -379,6 +424,19 @@ necessarily the deepest — a layer whose installment outweighs its saving is sk
 vs the next-smaller rung, surfaced inline: *"Going from PV+battery (−€24/mo) to the full bundle lands
 **+€120/mo** — because you're still burning oil + petrol that the heat pump and EV displace."*
 
+**R-B — All-data advice.** The optimiser must consume **every signal it has computed** before selecting
+and explaining a pick:
+- All four layer outputs (electricity, heating, mobility bucket €/mo, on the running state).
+- Applicable subsidies read from `subsidy_catalog` (§12.1) — subsidy rate, cap, and source URL.
+- Dynamic tariff spread (SMARD / seeded) — arbitrage and EV scheduling values.
+- Self-consumption ratio (autarky factor, load-aware, lifted by each layer).
+- Per-PLZ grid fee overlay (from `reference_plz`) — affects `retail_price` used everywhere.
+- Local irradiance (PVGIS `E_y` or specific-yield fallback) — drives PV sizing and L1 yield.
+
+The LLM advisor paragraph (§9) must **name** the dominant driver(s) — e.g. *"Your high petrol spend
+makes Layer 4 the biggest single saver; the battery unlocks full self-consumption once the HP is
+added."* — so the recommendation is transparent and traceable to the input data, not a black-box pick.
+
 ### 6.5 Financing overlay (the anchor) — **official sources**
 
 ```
@@ -398,7 +456,31 @@ break_even_month    = first month cumulative_net ≥ 0
 ```
 Sources: [KfW 458 (official)](https://www.kfw.de/inlandsfoerderung/Privatpersonen/Bestehende-Immobilie/Förderprodukte/Heizungsförderung-für-Privatpersonen-Wohngebäude-(458)/) ·
 [EEG feed-in — Bundesnetzagentur](https://www.bundesnetzagentur.de/DE/Fachthemen/ElektrizitaetundGas/ErneuerbareEnergien/EEG_Foerderung/start.html) ·
-[Umweltbonus ended — BAFA](https://www.bafa.de/DE/Energie/Energieeffizienz/Elektromobilitaet/elektromobilitaet_node.html).
+[Umweltbonus ended — BAFA](https://www.bafa.de/DE/Energie/Energieeffizienz/Elektromobilitaet/elektromobilitaet_node.html) ·
+[0 % VAT — §12(3) UStG](https://www.gesetze-im-internet.de/ustg_1980/__12.html).
+Subsidy rates are **not stored here** — they live in `subsidy_catalog` (§12.1) and are cited per row.
+
+### 6.6 Three recommended strategies (R-D)
+
+Beyond the single optimiser pick, `recommend()` also derives **three named strategies** over the
+ladder and returns them in the `strategies` field of the `Recommendation` response object. Each
+strategy is a `{ label, scenario, rationale }` triple.
+
+| Strategy | Selection logic | Label (example) | One-line rationale |
+|---|---|---|---|
+| **Optimal** | The full four-layer bundle (all layers net-positive); maximises `monthly_saving` from day one. | *"Full bundle — best monthly outcome"* | Strongest overall monthly saving; electrifies all spend categories. |
+| **Fastest payback** | The rung (or subset) with the **shortest `break_even_month`**; usually the single layer with the best `Δ_net / Δ_capex` ratio. Least capital tied up; profit starts earliest. | *"Quickest return — break-even in X months"* | Best ROI; reaches cumulative net ≥ 0 soonest; lowest financing risk. |
+| **Long-term** | The most comprehensive / premium tier available (may include stretch add-ons or the highest-spec PV size); maximises **lifetime value** — i.e. `saving_after_payoff × remaining_years`. | *"Maximum lifetime value"* | Greatest total impact over decades; ideal for long-term ownership and next-generation benefit; highest sustainability score. |
+
+**API contract:** `Recommendation.strategies: Strategy[]` (three items, ordered Optimal/Fastest/Long-term).
+Each `Strategy` = `{ id: "optimal"|"fastest"|"longterm", label: string, scenario: ScenarioResult,
+rationale: string, break_even_month: int }`. The `ScenarioResult` inside is reused from the existing
+`alternatives[]` ladder — no new computation, just a named pointer plus a pre-written rationale string
+generated by the LLM advisor.
+
+**Dashboard:** §9 shows the three strategies as **three comparable option cards** side-by-side (Check24
+style): monthly saving, capex after subsidy, break-even month, and the one-line rationale. The user
+can click any card to lock that config and proceed to the financing CTA.
 
 ---
 
@@ -505,8 +587,25 @@ gross of ~€24/mo; it had dropped the arbitrage line and used a lower self-cons
 - **Claude paragraph** in plain German: 3 sentences on why *this* config fits *this* home.
 - Green CTA: **Apply for Cloover financing**.
 
+**R-E — Costs + break-even per configuration (persuasive Cloover framing).**  Every recommended
+combination — including **partial configs** like solar-only — must show three financing facts clearly,
+in Cloover's interest, Check24-style:
+
+| Fact | Where it comes from | Example display |
+|---|---|---|
+| **Capex after subsidy** | `Δ_capex` summed over selected layers, subsidies from `subsidy_catalog` (§12.1) | *"Total investment: €26,850 after KfW 458"* |
+| **Monthly installment** | `annuity(capex_after_subsidy − downpayment, APR, term)` | *"≈ €244/mo financing"* |
+| **Break-even** | `break_even_month` from the engine — first month cumulative net ≥ 0 | *"You're in profit after 47 months (≈4 yrs)"* |
+
+Framing rule: lead with the **saving, not the cost** — show the installment only after the gross
+saving, so the net positive is the headline. For partial configs where the net is still negative (e.g.
+solar-only −€24/mo at rung 1), display the break-even year prominently with the up-sell hook: *"Add
+the heat pump + EV and you're +€120/mo from day one."* The three strategy cards (§6.6) each carry all
+three financing facts inline so the user can compare payback profiles at a glance.
+
 **90-sec demo:** type address + 5 numbers → solar number appears → tick 🔋 (≈€0, honest) → tick ♨️ + 🚗
-(number jumps with the up-sell line) → edit one assumption → band tightens → "Generate proposal".
+(number jumps with the up-sell line) → edit one assumption → band tightens → three strategy cards
+appear → pick "Full bundle" → "Apply for Cloover financing".
 
 ---
 
@@ -612,6 +711,58 @@ Flow: **Resolver reads `price_catalog` (+ per-PLZ overlays) → builds `PricingC
 pure engine.** Capex in §6.1 (`Δ_capex`) and every €/kWh in Layers 1–4 come from here. Changing a price
 = one DB row, no redeploy.
 
+### 12.1 Subsidy catalog — DB-driven `subsidy_catalog` (R-C)
+
+> Subsidies must **never be hard-coded**. Like `price_catalog`, they live in a Supabase table read at
+> request time, so rates and caps can be updated in one DB row without a redeploy. Each row carries an
+> **official/legal source URL** so the engine can cite the authority per subsidy in the response.
+
+**Supabase table `subsidy_catalog`:**
+
+```
+subsidy_catalog(
+  programme    text,    -- 'kfw_458_base' | 'kfw_458_speed_bonus' | 'kfw_458_income_bonus'
+                        --  'vat_pv_battery' | 'bafa_ev_umweltbonus' | 'laender_hp_<land_code>'
+                        --  'municipal_<plz_prefix>'   (optional Länder/municipal rows)
+  component    text,    -- 'heat_pump_a' | 'heat_pump_b' | 'pv' | 'battery' | 'ev_charger'
+  rate         numeric, -- fractional (0.30) or absolute (21000) depending on unit
+  cap_eur      numeric, -- maximum grant in EUR (null = no cap)
+  unit         text,    -- 'fraction_of_capex' | 'EUR_flat' | 'EUR_per_kWp'
+  source_url   text,    -- official/legal page (required — never null)
+  valid_from   date,
+  valid_until  date,    -- null = still in force
+  notes        text,    -- e.g. "Case B: HP→HP — no Klima-Geschwindigkeitsbonus"
+  PRIMARY KEY (programme, component, valid_from)
+)
+```
+
+**Seed rows (demo, 2026 — official sources):**
+
+| programme | component | rate | cap_eur | unit | source_url |
+|---|---|---|---|---|---|
+| `kfw_458_base` | `heat_pump_a` | 0.30 | 21 000 | fraction_of_capex | [KfW 458](https://www.kfw.de/inlandsfoerderung/Privatpersonen/Bestehende-Immobilie/Förderprodukte/Heizungsförderung-für-Privatpersonen-Wohngebäude-(458)/) |
+| `kfw_458_speed_bonus` | `heat_pump_a` | 0.20 | — | fraction_of_capex | [KfW 458](https://www.kfw.de/inlandsfoerderung/Privatpersonen/Bestehende-Immobilie/Förderprodukte/Heizungsförderung-für-Privatpersonen-Wohngebäude-(458)/) |
+| `kfw_458_base` | `heat_pump_b` | 0.30 | 21 000 | fraction_of_capex | [KfW 458](https://www.kfw.de/inlandsfoerderung/Privatpersonen/Bestehende-Immobilie/Förderprodukte/Heizungsförderung-für-Privatpersonen-Wohngebäude-(458)/) — no speed bonus (HP→HP, §5.3 note) |
+| `vat_pv_battery` | `pv` | 0.00 | — | fraction_of_capex | [§12(3) UStG](https://www.gesetze-im-internet.de/ustg_1980/__12.html) |
+| `vat_pv_battery` | `battery` | 0.00 | — | fraction_of_capex | [§12(3) UStG](https://www.gesetze-im-internet.de/ustg_1980/__12.html) |
+| `bafa_ev_umweltbonus` | `ev_charger` | 0.00 | 0 | EUR_flat | [BAFA](https://www.bafa.de/DE/Energie/Energieeffizienz/Elektromobilitaet/elektromobilitaet_node.html) — ended 17 Dec 2023 |
+
+Optional rows (not seeded by default): Länder-specific HP or PV grants (e.g. Bayern, BW), municipal
+climate-fund top-ups — add a row per programme × component; the engine sums all matching rows.
+
+**Engine flow:** Resolver queries `subsidy_catalog WHERE component = <layer> AND valid_from ≤ today AND
+(valid_until IS NULL OR valid_until ≥ today)` → builds `SubsidyContext` → injects alongside
+`PricingContext`. The financing step (§6.5) reads `SubsidyContext`, computes `capex_after_subsidy`,
+and appends an `assumptions[]` entry per subsidy row: `{ label, rate, cap, source_url }`. The LLM
+advisor and the dashboard tooltip cite `source_url` directly.
+
+**Periodic refresh (R-C):** the `subsidy_catalog` table is the single source of truth. A designated
+team member verifies each row against its `source_url` before each demo and after any policy change
+(KfW Merkblatt updates, GEG amendments, Bundestag votes). A GitHub Actions workflow (stretch) can
+automate a weekly HEAD-request check against each `source_url` and open a PR if a 404 or redirect is
+detected — auto-parsing rate changes is a further stretch. Until then, the `valid_until` column gates
+expired rows out of the engine automatically without code changes.
+
 ---
 
 ## 13. Resource lists
@@ -643,7 +794,7 @@ pure engine.** Capex in §6.1 (`Δ_capex`) and every €/kWh in Layers 1–4 com
 |---|---|---|
 | Solar yield (L1) | **PVGIS** | free, no key, demo-safe; constant 980 fallback |
 | Dynamic tariff (L2/L4, §7) | **SMARD** (primary) + aWATTar (alt) | official Bundesnetzagentur data; seeded €0.12 spread for the demo |
-| Subsidies / policy (§6.5) | **KfW 458 · BAFA · GEG** (seeded constants) | official, static — no live call needed |
+| Subsidies / policy (§6.5, §12.1) | **`subsidy_catalog` in Supabase** (KfW 458 · BAFA · UStG seeded; source_url per row) | DB-driven, cites official source per subsidy, no hard-code |
 | Prices (§12) | **`price_catalog` in Supabase** (Destatis-seeded) | DB-driven, editable, no hard-code |
 | Permits (Site-Check) | **OSM Overpass** + Denkmal checkbox | free; checkbox is the national fallback |
 | Roof geometry (L1) | **PVGIS + area heuristic** (Google Solar = stretch toggle) | avoids billing/EEA caveats in the demo |
@@ -659,19 +810,24 @@ dependencies**; live PVGIS/SMARD/Google are upgrade toggles.
 
 ### 14.1 Engine endpoint
 
-`POST /api/v1/advisor/recommend` → `Recommendation { best, alternatives[], upsell }`. **`alternatives[]`
-= the four cumulative ladder steps**; each `ScenarioResult` carries `breakdown
+`POST /api/v1/advisor/recommend` → `Recommendation { best, alternatives[], upsell, strategies[] }`.
+**`alternatives[]` = the four cumulative ladder steps**; each `ScenarioResult` carries `breakdown
 {electricity,heating,mobility}_eur_month`, `installment_eur_month`, `monthly_saving_eur` (North Star),
-`payback_note`. The configurator's per-layer "+€X/mo" = the difference between consecutive
-`monthly_saving_eur` values (§6.1) — no extra call.
+`break_even_month`, `capex_after_subsidy_eur`, `payback_note`. The configurator's per-layer "+€X/mo" =
+the difference between consecutive `monthly_saving_eur` values (§6.1) — no extra call.
+
+**`strategies[]`** (R-D): three `Strategy` objects — `{ id, label, scenario: ScenarioResult, rationale,
+break_even_month }` — for Optimal / Fastest payback / Long-term (§6.6). Reuses ladder ScenarioResults;
+no new computation.
 
 **Required contract extensions (update `openapi.yaml` in the same PR):** add to `Household` —
 `address {street, house_no, city}` (mandatory), `floor_area_m2`, `building_year`, `existing_pv_kwp`,
-`existing_battery_kwh`, **`existing_heatpump_year` (nullable — null ⇒ no HP)**, **`existing_ev: bool`**,
-**`existing_ev_charger: bool`**, and `mobility.km_month` (alongside `eur_month`; `CarType` enum already
-includes `EV`). À-la-carte stretch: optional `selection {pv,battery,heat_pump,ev}: bool`. The two new
-edge cases (old-HP upgrade, EV-without-charger) need no new endpoint — they change only which layer is
-*offered* and the *baseline* it replaces, both resolved server-side from these fields.
+`existing_battery_kwh`, **`existing_heatpump_year` (nullable — null ⇒ no HP)**,
+**`existing_heatpump_power_kw` (optional float — R-A)**, **`existing_heatpump_scop` (optional float — R-A)**,
+**`existing_ev: bool`**, **`existing_ev_charger: bool`**, and `mobility.km_month` (alongside `eur_month`;
+`CarType` enum already includes `EV`). À-la-carte stretch: optional `selection {pv,battery,heat_pump,ev}: bool`.
+The edge cases (old-HP upgrade, EV-without-charger) need no new endpoint — they change only which layer
+is *offered* and the *baseline* it replaces, both resolved server-side from these fields.
 
 ### 14.2 Enrichment endpoint
 
@@ -684,6 +840,8 @@ first, then `/recommend`.
 ```
 reference_plz   (plz PK, lat, lon, specific_yield, retail_price, grid_fee, climate_zone, mastr_count)
 price_catalog   (component, tier, unit, unit_price, source, valid_from)          -- §12, DB-driven prices
+subsidy_catalog (programme, component, rate, cap_eur, unit, source_url,          -- §12.1, DB-driven subsidies
+                 valid_from, valid_until, notes)
 cache_pvgis     (lat, lon, tilt, azimuth, kwp, payload_json, fetched_at)         -- TTL 30d
 cache_dynprice  (market_area, day, payload_json, fetched_at)                     -- TTL 1d (SMARD/aWATTar)
 advise_run      (id PK, household_json, options_json, recommendation_json, created_at)
@@ -707,7 +865,11 @@ denkmal_seed (plz, flag)   mastr_seed (plz, count)                              
 | Old-HP upgrade or EV-charger offer over-sold | Case B saving = efficiency/price-gap only, no Klima-bonus for HP→HP (§5.3, §6.5); optimiser drops it if net-negative |
 | Denkmal/MaStR not national | checkbox fallback; social-proof never gates |
 | Secret leaks via Vite bundle | only `VITE_API_BASE_URL` client-side; all keys in FastAPI |
-| Scope creep | MVP = Layers 1–4 nested ladder + KfW + LLM copy; hourly sim, Google Solar, à-la-carte, live SMARD = stretch |
+| Subsidy rates drift (KfW Merkblatt update) | `subsidy_catalog` `valid_until` gates old rows out; periodic manual re-verification against `source_url` (§12.1); stretch: GitHub Actions HEAD-check |
+| Wrong HP SCOP from user (R-A) | `existing_heatpump_scop` is optional and labelled; default 2.8 is conservative; confidence band widens when user-SCOP not provided |
+| Three-strategy cards confuse user | Strategy cards are clearly labelled (§6.6); default selection is "Optimal"; other two are compare/upsell — not the primary CTA |
+| Break-even framing feels negative | Frame as *"in profit after X months"*, not cost; lead with saving (R-E framing rule, §9) |
+| Scope creep | MVP = Layers 1–4 nested ladder + KfW + LLM copy + three strategy cards; hourly sim, Google Solar, à-la-carte, live SMARD, Länder subsidy rows = stretch |
 
 ---
 

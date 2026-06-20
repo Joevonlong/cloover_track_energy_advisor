@@ -155,7 +155,17 @@ KfW nuance: HP→HP does **not** earn the Klima-Geschwindigkeitsbonus ⇒ Case B
 - [ ] Reviewed by Lukas; merged to `main`; main is green.
 - [ ] The demo happy-path still works end-to-end after merge.
 
+## Round 3 additions (v0.4)
+
+_Consumes the new optional HP spec fields from F05's normalised state to sharpen the Case-B baseline (R-A, §3.2, §5.3)._
+
+- **`existing_heatpump_scop` priority order** (R-A, §5.3): when computing Case-B `heat_demand_kwh`, use `old_SCOP` according to: (1) `existing_heatpump_scop` if user-supplied — most accurate; (2) age-regression from `existing_heatpump_year` table; (3) constant `2.8` default (age ≥ 12 yrs / pre-2014). The `old/inefficient` threshold check (`SCOP < 3.0`) also uses the user value directly when provided, which may raise or lower the offer gate.
+- **`existing_heatpump_power_kw` overrides area-method sizing** (R-A, §5.3): when `existing_heatpump_power_kw` is present, use it as `required_kW` directly (skip the `heat_load_W_m2 × floor_area_m2 / 1000` lookup and the ceil-to-standard-size step). This narrows the confidence band for Case-B and is emitted as a `source="user"` `Assumption`.
+- **Accuracy vs default trade-off**: both fields are optional; when absent, the existing §5.3 defaults apply unchanged. When present, emit a labelled assumption noting the user value was used and that the confidence band is narrower.
+- **New AC** (AC8): given `existing_heatpump_scop = 2.5` and `existing_heatpump_power_kw = 10.0`, when Case-B runs, then `old_SCOP = 2.5` (not 2.8), `required_kW = 10.0` (area method skipped), the saving equals `heat_demand × (1/2.5 − 1/4.0) × retail_price`, and both fields are tagged `source="user"` in `assumptions[]`.
+
 ## 11. References
 
 - `docs/design_plan/system_workflow.md` §5.3, §3.2, §6.3, §6.5, §7, §10, §12
+- `docs/design_plan/system_workflow.md` **§3.2** (R-A — optional `existing_heatpump_power_kw`/`existing_heatpump_scop` and their priority order), **§5.3** (Case-B `old_SCOP` priority, area-method override).
 - `specs/api/openapi.yaml` · `specs/domain/savings-engine.spec.md` (§8 vectors via F03)

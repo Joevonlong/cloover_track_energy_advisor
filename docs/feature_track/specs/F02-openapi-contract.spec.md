@@ -151,8 +151,18 @@ layer_delta_eur_month(n) = alternatives[n].monthly_saving_eur − alternatives[n
 - [ ] Reviewed by Lukas **as the contract owner** (`contract_impact ≠ none`); merged to `main`; main is green.
 - [x] The demo happy-path (a fixture `Recommendation` deserialises in FE + BE) still works after merge. ✅ `apps/api/fixtures/demo-detached.json` is valid JSON (verified `python3 -m json.tool`); matches all schema types.
 
+## Round 3 additions (v0.4)
+
+_Extends the frozen contract — this is a **reviewed contract bump** (PROCESS §6), no longer frozen-final. Owner: Zhou. Same PR regenerates the TS client and Pydantic models._
+
+- **`strategies` field on `Recommendation`** (R-D, §6.6, §14.1): add `strategies: Strategy[]` carrying three items — Optimal / Fastest-payback / Long-term. Each `Strategy = { id: "optimal"|"fastest"|"longterm", label: string, scenario: ScenarioResult, rationale: string, break_even_month: int }`. Reuses existing `ScenarioResult` objects from `alternatives[]`; no new computation endpoint. Feeds F27 (three-strategy engine) and F22 (Check24-style option cards).
+- **Optional existing-HP spec fields on `Household`** (R-A, §3.2, §14.1): add `existing_heatpump_power_kw?: number` (rated thermal output, kW) and `existing_heatpump_scop?: number` (measured/nameplate SCOP). Both are optional floats (null/omitted when not known). They refine the Case-B HP baseline in F08; the contract carries the fields, the engine decides how to use them.
+- **Regenerate in the same PR**: bump `openapi.yaml`, regenerate the TS client (`make gen`), regenerate/update Pydantic models; assert `tsc` and `mypy` pass. Reviewed by Lukas per PROCESS §6 (`contract_impact: extends`).
+- **AC additions**: (AC9) `Recommendation.strategies` is present, typed, and carries exactly three `Strategy` items in the Optimal / Fastest / Long-term order; (AC10) `Household` schema accepts `existing_heatpump_power_kw` and `existing_heatpump_scop` as optional floats and the DTO is still valid when they are absent.
+
 ## 11. References
 
 - `docs/design_plan/system_workflow.md` §14.1 (`/recommend`), §14.2 (`/site-check`), §3.1–§3.3 (intake fields, km mobility), §6.1 (marginal ladder), §1 (contract row + determinism).
+- `docs/design_plan/system_workflow.md` **§6.6** (three-strategy contract extension), **§3.2** (existing-HP `power_kW`/`SCOP` optional fields — R-A), **§14.1** (updated `/recommend` contract with `strategies[]`).
 - `specs/api/openapi.yaml` — the artifact authored by this feature.
-- Backlog `FEATURE_BACKLOG.md` §1 (contract is the parallelism seam), §6 (contract-freeze risk), §3 E0 row F02.
+- Backlog `FEATURE_BACKLOG.md` §1 (contract is the parallelism seam), §6 (contract-freeze risk), §3 E0 row F02, **§2.1 R-A + R-D** (round-3 triggers).

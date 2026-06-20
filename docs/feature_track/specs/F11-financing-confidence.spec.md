@@ -146,7 +146,18 @@ break_even_month    = first month cumulative_net ≥ 0
 - [ ] Reviewed by **Zhou** (independent, per frontmatter — domain feature owned by Lukas, reads the frozen F02 contract); merged to `main`; main is green.
 - [ ] The demo happy-path still works end-to-end after merge.
 
+## Round 3 additions (v0.4)
+
+_Subsidies now come from the injected `SubsidyContext` (F26) rather than hard-coded constants; each applied subsidy emits a cited `Assumption` (R-C, §6.5, §12.1)._
+
+- **Read subsidies from `SubsidyContext` (F26)** (R-C, §12.1, §6.5): replace all hard-coded subsidy literals with lookups against the injected `SubsidyContext` built from `subsidy_catalog`. The resolver queries `subsidy_catalog WHERE component = <layer> AND valid_from ≤ today AND (valid_until IS NULL OR valid_until ≥ today)` and passes the resulting context to the financing step. F11 reads rate, cap, and `source_url` from the context rows.
+- **Cited `Assumption` per subsidy row** (§12.1): for every subsidy applied, append an `Assumption{ field: "<programme>.<component>", value: "<rate or €>", source: "<source_url>", editable: false }` to the result's `assumptions[]`. The LLM advisor and the dashboard tooltip can then cite the `source_url` directly — no un-sourced grant number ever appears in the payload.
+- **KfW 50%/30% (D4) from `subsidy_catalog` rows, not literals**: the Case-A `kfw_458_base + kfw_458_speed_bonus = 0.50` and the Case-B `kfw_458_base = 0.30` (no speed bonus, HP→HP §5.3) are now derived by summing the matching `subsidy_catalog` rows, not embedded in code. If KfW rates change, a DB row update propagates automatically without redeploy.
+- **Backwards-compatible**: `ScenarioResult.capex.subsidy_note` and `assumptions[]` carry the cited values; the frozen F02 contract already has both fields. No new wire objects.
+- **New AC** (AC11): given a `SubsidyContext` seeded with the §12.1 demo rows, when financing is overlaid on a Case-A HP rung, then `capex.after_subsidy_eur` matches `capex.gross_eur × (1 − 0.50)`, `assumptions[]` contains entries for `kfw_458_base` and `kfw_458_speed_bonus` each citing `source_url = "https://www.kfw.de/…"`, and no subsidy rate is read from a code literal.
+
 ## 11. References
 
 - `docs/design_plan/system_workflow.md` §6.5, §7, §7.1, §8, §8.1, §10, §16 (D9)
+- `docs/design_plan/system_workflow.md` **§12.1** (R-C — `subsidy_catalog` DB table, `source_url` per row, cited `Assumption` per subsidy), **§6.5** (KfW 50%/30% now from catalog rows, not literals).
 - `specs/api/openapi.yaml` (`ScenarioResult.installment_eur_month`, `monthly_saving_eur`, `payback_note`) · `specs/domain/savings-engine.spec.md` (§8 vectors via F03)

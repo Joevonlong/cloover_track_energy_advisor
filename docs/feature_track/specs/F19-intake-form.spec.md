@@ -173,3 +173,14 @@ the result on missing data — degrade to defaults and flag uncertainty.
 - `docs/design_plan/system_workflow.md` §3.1 (mandatory fields), §3.2 (existing equipment + offer matrix), §3.3 (km mobility), §3.4 (progressive disclosure, two modes one schema), §4 (why address is mandatory), §7 (overrides tighten the band).
 - `specs/api/openapi.yaml` (F02 — `Household`, `FuelType`, `CarType`) · `specs/domain/savings-engine.spec.md` (F05 normalisation it feeds).
 - Backlog `FEATURE_BACKLOG.md` §3 E3 row F19 (conversational intake = 🔶), §5 (§3.1/§3.3/§3.4 traceability).
+
+## Round 3 additions (v0.4)
+
+R-A (§3.2, FEATURE_BACKLOG §2.1): extend the existing-equipment section of the Zod schema and form with the following new conditional spec fields; all are optional in the `Household` contract (F02 bump) and default to `null`/`false` when not supplied.
+
+- **PV spec** — when the user ticks `existing_pv_kwp > 0`, reveal a numeric input for `existing_pv_kwp` (kWp, 0.1–50, 1 decimal). Validate with Zod `z.number().positive().max(50)`. Pass through to `Household.existing_pv_kwp`.
+- **Battery spec** — when `existing_battery_kwh > 0` is ticked, reveal `existing_battery_kwh` (kWh, 0.1–100). Same Zod pattern. Pass through to `Household.existing_battery_kwh`.
+- **Heat-pump specs** — when `existing_heatpump_year` is set (non-null), reveal two optional sub-fields: `existing_heatpump_power_kw` (float, kW rated thermal output, nullable) and `existing_heatpump_scop` (float, 1.0–6.0, nullable). Both refine the Case-B efficiency-delta baseline (§5.3); omitting them falls back to the area-method and `old_SCOP = 2.8`. Zod: `z.number().positive().nullable().optional()` for each. Pass to contract fields added in F02.
+- **EV + charger flags** — `existing_ev` (boolean checkbox) and `existing_ev_charger` (boolean, revealed only when `existing_ev = true`). Zod: `z.boolean().default(false)`. Together they drive the Case-A/Case-B toggle in Layer 4 (§5.4 offer matrix).
+- **"Already installed ✓" rendering** — owned items (any `existing_*` value set / truthy) must display a green "already installed - no capex" badge in the configurator rows (F20); the form forwards the values so F20 can apply the delta-only labelling per §3.2.
+- **Zod validation and contract parity** — the extended Zod schema must be updated in the same PR as the F02 `Household` contract bump; AC7 (contract-shape parity) must be re-run with the new optional fields present and absent.
