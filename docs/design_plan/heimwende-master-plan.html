@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Heimwende Energy Advisor — Master Plan</title>
+<style>
+  :root{
+    --bg:#0e1117; --panel:#161b22; --panel2:#1c2530; --ink:#e6edf3; --muted:#9fb0c0;
+    --line:#2a3441; --green:#22c55e; --green-d:#16a34a; --amber:#f59e0b; --blue:#38bdf8;
+    --violet:#a78bfa; --rose:#fb7185; --chip:#0b3d2e; --accent:#22c55e;
+    --shadow:0 8px 30px rgba(0,0,0,.35);
+    --r:16px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(1200px 600px at 80% -10%,#13301f 0%,transparent 60%),var(--bg);
+    color:var(--ink);font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;padding:0 18px 80px}
+  .wrap{max-width:1080px;margin:0 auto}
+  header.hero{padding:48px 0 24px;border-bottom:1px solid var(--line)}
+  .eyebrow{color:var(--green);font-weight:700;letter-spacing:.14em;text-transform:uppercase;font-size:12px}
+  h1{font-size:40px;line-height:1.1;margin:10px 0 6px;letter-spacing:-.02em}
+  .sub{color:var(--muted);max-width:760px}
+  .meta{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+  .pill{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:13px;color:var(--muted)}
+  .pill b{color:var(--ink)}
+
+  section{margin-top:40px}
+  .kicker{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+  .kicker .n{width:30px;height:30px;border-radius:9px;background:var(--chip);color:var(--green);
+    display:grid;place-items:center;font-weight:800;border:1px solid #1f5b43;font-size:14px}
+  h2{font-size:23px;margin:0;letter-spacing:-.01em}
+  h2 small{display:block;color:var(--muted);font-weight:400;font-size:14px;margin-top:3px}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:20px;box-shadow:var(--shadow)}
+  .grid{display:grid;gap:14px}
+  .g2{grid-template-columns:1fr 1fr}
+  .g3{grid-template-columns:repeat(3,1fr)}
+  .g4{grid-template-columns:repeat(4,1fr)}
+  @media(max-width:880px){.g2,.g3,.g4{grid-template-columns:1fr}}
+
+  .formula{background:linear-gradient(180deg,#0f1b14,#0c130f);border:1px solid #1f5b43;border-radius:14px;
+    padding:18px 20px;font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:15px;color:#d7ffe9;overflow-x:auto}
+  .formula .v{color:var(--green);font-weight:700}
+  .formula .o{color:var(--amber)}
+
+  /* hero number mock */
+  .savecard{background:linear-gradient(160deg,#16351f,#0e1a13);border:1px solid #225c3f;border-radius:18px;padding:26px;text-align:center}
+  .savecard .lbl{color:#8fe6b3;font-size:13px;letter-spacing:.1em;text-transform:uppercase}
+  .savecard .big{font-size:54px;font-weight:800;letter-spacing:-.02em;margin:6px 0;color:#eafff3}
+  .savecard .big span{color:var(--green)}
+  .savecard .band{display:inline-block;background:#0c2a1c;border:1px solid #2c6647;border-radius:999px;padding:3px 12px;font-size:13px;color:#bff3d4}
+  .savecard .curve{color:#a7c4b5;margin-top:12px;font-size:14px}
+
+  .bucket{border-radius:14px;padding:16px;border:1px solid var(--line);background:var(--panel2)}
+  .bucket h4{margin:0 0 4px;font-size:15px;display:flex;align-items:center;gap:8px}
+  .bucket .amt{font-size:26px;font-weight:800}
+  .b-elec{border-left:4px solid var(--amber)}
+  .b-heat{border-left:4px solid var(--rose)}
+  .b-mob{border-left:4px solid var(--blue)}
+  .mono{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;color:var(--muted);margin-top:8px;white-space:pre-wrap}
+
+  /* pipeline */
+  .pipe{display:flex;align-items:stretch;gap:0;flex-wrap:wrap}
+  .stage{flex:1 1 150px;min-width:150px;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:14px;position:relative;margin:6px}
+  .stage .t{font-weight:700;font-size:14px}
+  .stage .d{color:var(--muted);font-size:12.5px;margin-top:4px}
+  .stage .tag{position:absolute;top:-9px;left:12px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;
+    background:var(--chip);color:var(--green);border:1px solid #1f5b43;border-radius:6px;padding:1px 7px}
+  .pure{outline:1px dashed #2c6647}
+  .arrow{align-self:center;color:var(--green);font-size:22px;padding:0 2px}
+
+  table{width:100%;border-collapse:collapse;font-size:13.5px;overflow:hidden;border-radius:12px}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:var(--panel2);color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.05em}
+  tr:last-child td{border-bottom:none}
+  td b{color:var(--ink)}
+  .tier{font-size:11px;font-weight:700;border-radius:6px;padding:1px 7px;white-space:nowrap}
+  .t-must{background:#0c2a1c;color:#6ee7a8;border:1px solid #2c6647}
+  .t-acc{background:#2a230b;color:#fcd34d;border:1px solid #6b5417}
+  .t-str{background:#0c2233;color:#7dd3fc;border:1px solid #1c4f6b}
+
+  .row{display:flex;gap:10px;align-items:flex-start;margin:8px 0}
+  .dot{margin-top:8px;width:8px;height:8px;border-radius:50%;background:var(--green);flex:none}
+  .dot.a{background:var(--amber)} .dot.b{background:var(--blue)} .dot.r{background:var(--rose)} .dot.v{background:var(--violet)}
+
+  .scen td:first-child{font-weight:700}
+  .yes{color:var(--green);font-weight:700}
+  .no{color:#46525f}
+  .win{background:linear-gradient(90deg,#13301f,transparent)}
+  .win td:first-child{color:#6ee7a8}
+
+  .note{background:var(--panel2);border:1px dashed var(--line);border-radius:12px;padding:14px;color:var(--muted);font-size:13.5px}
+  .warn{border-color:#6b5417;background:#1f1a0b;color:#fcd34d}
+
+  .q{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--line)}
+  .q:last-child{border:none}
+  .q .num{color:var(--green);font-weight:800;flex:none}
+  .rec{color:#6ee7a8;font-size:12.5px;background:#0c2a1c;border:1px solid #2c6647;border-radius:6px;padding:1px 7px;margin-left:6px}
+
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);margin-top:10px}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .foot{margin-top:50px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px}
+  a{color:var(--green)}
+  .timeline-wrap{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+  .timeline-wrap svg{flex:1 1 380px;min-width:300px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <div class="eyebrow">Cloover Track · {Tech: Europe} Energy × AI Hackathon</div>
+    <h1>Heimwende Energy Advisor</h1>
+    <p class="sub">From minimal household input, model the home-energy upgrade + financing + dynamic tariff
+      that produces the <b>largest credible monthly saving</b> — and explain it in plain language an
+      installer can paste into a proposal.</p>
+    <div class="meta">
+      <span class="pill">📍 Market: <b>Germany</b></span>
+      <span class="pill">⏰ Deadline: <b>Sun 14:00</b></span>
+      <span class="pill">🎯 North Star: <b>monthly saving</b></span>
+      <span class="pill">🧠 AI: <b>explains, never computes</b></span>
+    </div>
+  </header>
+
+  <!-- 0. NORTH STAR -->
+  <section>
+    <div class="kicker"><div class="n">★</div><h2>The one number<small>Everything serves this formula</small></h2></div>
+    <div class="formula">
+monthly_saving = <span class="v">current_monthly_spend</span> <span class="o">−</span> ( <span class="v">loan_installment</span> <span class="o">+</span> <span class="v">new_monthly_energy_cost</span> )
+    </div>
+    <p class="sub" style="margin-top:12px">If a feature doesn't <b>move</b>, <b>defend</b>, or <b>explain</b> this number, it's out of scope for the demo.</p>
+  </section>
+
+  <!-- 1. PRODUCT FRAMING -->
+  <section>
+    <div class="kicker"><div class="n">1</div><h2>The inversion<small>Why this wins the track</small></h2></div>
+    <div class="grid g2">
+      <div class="card" style="border-color:#5b2c2c">
+        <div style="color:var(--rose);font-weight:700;margin-bottom:6px">✕ Today (backwards)</div>
+        <div class="row"><span class="dot r"></span><div>Sell an <b>installation + financing</b> first…</div></div>
+        <div class="row"><span class="dot r"></span><div>…then bolt a <b>tariff</b> on afterwards</div></div>
+        <div class="row"><span class="dot r"></span><div>Customer sees hardware specs, not outcome</div></div>
+      </div>
+      <div class="card" style="border-color:#2c6647">
+        <div style="color:var(--green);font-weight:700;margin-bottom:6px">✓ Heimwende (outcome-first)</div>
+        <div class="row"><span class="dot"></span><div><b>One product</b>: upgrade + loan + dynamic tariff</div></div>
+        <div class="row"><span class="dot"></span><div><b>One number</b>: "You save €X / month"</div></div>
+        <div class="row"><span class="dot"></span><div><b>Honest curve</b>: ≈ cost-neutral now → €X after payoff</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HERO NUMBER + TIMELINE -->
+  <section>
+    <div class="kicker"><div class="n">▣</div><h2>What the user sees first<small>The hero number + the honest two-phase curve</small></h2></div>
+    <div class="grid g2">
+      <div class="savecard">
+        <div class="lbl">You save</div>
+        <div class="big"><span>€142</span> / month</div>
+        <div class="band">confidence ±€35</div>
+        <div class="curve">≈ cost-neutral today &nbsp;→&nbsp; <b style="color:#eafff3">€268/month</b> once the 10-yr loan is paid off</div>
+      </div>
+      <div class="card">
+        <div style="font-weight:700;margin-bottom:6px">The honest timeline (lead the demo with this)</div>
+        <div class="timeline-wrap">
+          <svg viewBox="0 0 380 170" xmlns="http://www.w3.org/2000/svg">
+            <!-- axes -->
+            <line x1="38" y1="20" x2="38" y2="140" stroke="#2a3441"/>
+            <line x1="38" y1="110" x2="360" y2="110" stroke="#2a3441" stroke-dasharray="3 3"/>
+            <line x1="38" y1="140" x2="360" y2="140" stroke="#2a3441"/>
+            <text x="6" y="40" fill="#9fb0c0" font-size="9">€/mo</text>
+            <text x="2" y="113" fill="#9fb0c0" font-size="9">0</text>
+            <!-- phase 1: financing (small saving) -->
+            <rect x="38" y="92" width="170" height="18" fill="#16a34a" opacity=".45"/>
+            <text x="58" y="128" fill="#9fb0c0" font-size="9">while financing</text>
+            <text x="92" y="86" fill="#6ee7a8" font-size="10">€142</text>
+            <!-- break-even marker -->
+            <line x1="208" y1="30" x2="208" y2="140" stroke="#f59e0b" stroke-dasharray="2 2"/>
+            <text x="178" y="26" fill="#f59e0b" font-size="9">loan paid off</text>
+            <!-- phase 2: after payoff (big saving) -->
+            <rect x="208" y="44" width="152" height="66" fill="#22c55e" opacity=".55"/>
+            <text x="250" y="38" fill="#eafff3" font-size="11" font-weight="700">€268</text>
+            <text x="232" y="128" fill="#9fb0c0" font-size="9">after payoff</text>
+            <text x="300" y="156" fill="#9fb0c0" font-size="9">months →</text>
+          </svg>
+        </div>
+        <div class="mono">Even when the installment eats the saving early, we show it honestly — trust beats a flashy number.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. USER INPUT -->
+  <section>
+    <div class="kicker"><div class="n">2</div><h2>User input<small>Minimal in, rich model out · progressive disclosure</small></h2></div>
+    <p class="sub">Two entry modes share one schema: <b>Form</b> (fast, demo-safe) and <b>Conversational LLM intake</b> (the wow). Ask 6 things, derive the rest from PLZ.</p>
+    <div style="font-weight:700;margin:14px 0 8px;color:var(--green)">Tier 0 — the absolute minimum</div>
+    <div class="grid g3">
+      <div class="bucket"><h4>📍 1 · Postal code</h4><div class="mono">unlocks irradiance, grid fees, climate, prices</div></div>
+      <div class="bucket"><h4>🏠 2 · Home type / ownership</h4><div class="mono">roof potential + subsidy eligibility</div></div>
+      <div class="bucket"><h4>⚡ 3 · Electricity spend</h4><div class="mono">baseline bucket 1 (€/mo)</div></div>
+      <div class="bucket"><h4>🔥 4 · Heating fuel + spend</h4><div class="mono">baseline 2 + heat-pump upside</div></div>
+      <div class="bucket"><h4>🚗 5 · Car type + spend</h4><div class="mono">baseline 3 + EV upside</div></div>
+      <div class="bucket"><h4>👥 6 · Household size</h4><div class="mono">load profile + consumption scaling</div></div>
+    </div>
+    <div class="note" style="margin-top:14px">🟡 <b>Tier 1 (optional, tightens the band):</b> roof orientation/tilt · usable area · annual km · year built / insulation · existing PV/battery · loan tenor. Every missing field gets a <b>labelled assumption</b> ("assumed south-facing, 35°") the user can override.</div>
+  </section>
+
+  <!-- 3. SAVINGS MODEL -->
+  <section>
+    <div class="kicker"><div class="n">3</div><h2>The savings model<small>Pure, deterministic, TDD'd domain core — this is where credibility lives</small></h2></div>
+    <p class="sub">Reconstruct physical baselines (kWh, km, litres) from spend ÷ local price, then compute three buckets.</p>
+    <div class="grid g3" style="margin-top:6px">
+      <div class="bucket b-elec">
+        <h4>⚡ Electricity</h4><div class="amt" style="color:var(--amber)">€61<span style="font-size:13px;color:var(--muted)">/mo</span></div>
+        <div class="mono">PV self-consumption
++ feed-in of surplus
++ battery arbitrage
+  (charge cheap / discharge
+   expensive on dynamic tariff)</div>
+      </div>
+      <div class="bucket b-heat">
+        <h4>🔥 Heating</h4><div class="amt" style="color:var(--rose)">€55<span style="font-size:13px;color:var(--muted)">/mo</span></div>
+        <div class="mono">oil/gas spend → kWh heat
+÷ SCOP (3.0–4.0, climate)
+= heat-pump electricity
+(partly self-generated)</div>
+      </div>
+      <div class="bucket b-mob">
+        <h4>🚗 Mobility</h4><div class="amt" style="color:var(--blue)">€26<span style="font-size:13px;color:var(--muted)">/mo</span></div>
+        <div class="mono">petrol spend → km/year
+→ EV kWh
+charged at PV surplus +
+off-peak dynamic blend</div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <div style="font-weight:700;margin-bottom:4px">The upgrade ladder — <span style="color:var(--green)">cumulative, not a menu</span></div>
+      <div style="color:var(--muted);font-size:13px;margin-bottom:12px">Each rung keeps everything below it and unlocks one new value stream. The optimiser walks the ladder and <b>stops at the depth with the highest cumulative net saving</b> — deeper isn't always better.</div>
+      <svg viewBox="0 0 640 210" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto">
+        <line x1="40" y1="180" x2="610" y2="180" stroke="#2a3441"/>
+        <text x="8" y="184" fill="#9fb0c0" font-size="9">€0</text>
+        <line x1="125" y1="142" x2="195" y2="142" stroke="#3a4a3f" stroke-dasharray="3 3"/>
+        <line x1="265" y1="119" x2="335" y2="119" stroke="#3a4a3f" stroke-dasharray="3 3"/>
+        <line x1="405" y1="64"  x2="475" y2="64"  stroke="#3a4a3f" stroke-dasharray="3 3"/>
+        <!-- rung ① -->
+        <rect x="55" y="142" width="70" height="38" rx="3" fill="#f59e0b" opacity=".85"/>
+        <text x="90" y="135" fill="#fcd34d" font-size="11" text-anchor="middle" font-weight="700">€38</text>
+        <text x="90" y="165" fill="#1b1205" font-size="10" text-anchor="middle">+€38</text>
+        <text x="90" y="197" fill="#cbd5e1" font-size="10" text-anchor="middle">① Solar/PV</text>
+        <!-- rung ② -->
+        <rect x="195" y="142" width="70" height="38" rx="3" fill="#2a3b30"/>
+        <rect x="195" y="119" width="70" height="23" rx="3" fill="#f59e0b" opacity=".55"/>
+        <text x="230" y="112" fill="#fcd34d" font-size="11" text-anchor="middle" font-weight="700">€61</text>
+        <text x="230" y="135" fill="#fde9c8" font-size="10" text-anchor="middle">+€23</text>
+        <text x="230" y="197" fill="#cbd5e1" font-size="10" text-anchor="middle">② +Battery</text>
+        <!-- rung ③ -->
+        <rect x="335" y="119" width="70" height="61" rx="3" fill="#2a3b30"/>
+        <rect x="335" y="64" width="70" height="55" rx="3" fill="#fb7185" opacity=".8"/>
+        <text x="370" y="57" fill="#fecdd3" font-size="11" text-anchor="middle" font-weight="700">€116</text>
+        <text x="370" y="96" fill="#2a0d12" font-size="10" text-anchor="middle">+€55</text>
+        <text x="370" y="197" fill="#cbd5e1" font-size="10" text-anchor="middle">③ +Heat pump</text>
+        <!-- rung ④ -->
+        <rect x="475" y="64" width="70" height="116" rx="3" fill="#2a3b30"/>
+        <rect x="475" y="38" width="70" height="26" rx="3" fill="#38bdf8" opacity=".8"/>
+        <text x="510" y="31" fill="#bae6fd" font-size="11" text-anchor="middle" font-weight="700">€142</text>
+        <text x="510" y="56" fill="#06202c" font-size="10" text-anchor="middle">+€26</text>
+        <text x="510" y="197" fill="#6ee7a8" font-size="10" text-anchor="middle" font-weight="700">④ +EV ★</text>
+      </svg>
+      <table class="scen" style="margin-top:8px">
+        <thead><tr><th>Rung</th><th>Adds</th><th>Unlocks value stream</th><th>Bucket</th><th>Δ net</th><th>Cumulative</th></tr></thead>
+        <tbody>
+          <tr><td>①</td><td>Solar / PV</td><td>self-consumption of own generation</td><td>Electricity (a)</td><td>+€38</td><td>€38</td></tr>
+          <tr><td>②</td><td>+ Battery</td><td>↑ self-consumption + dynamic-tariff arbitrage</td><td>Electricity (b)</td><td>+€23</td><td>€61</td></tr>
+          <tr><td>③</td><td>+ Heat pump</td><td>fossil heating → (partly self-generated) electricity</td><td>Heating</td><td>+€55</td><td>€116</td></tr>
+          <tr class="win"><td>④ ★</td><td>+ EV charger</td><td>petrol → off-peak / PV charging</td><td>Mobility</td><td>+€26</td><td><b style="color:#6ee7a8">€142</b></td></tr>
+        </tbody>
+      </table>
+      <div class="note" style="margin-top:12px"><b>Up-sell = the next rung, quantified.</b> Solar alone saves €38/mo; because the home still burns oil at €180/mo, the <b>heat-pump rung adds €55</b> — the biggest single jump. Each rung carries its own capex → own installment, so <b>Δ net = Δ gross − Δ installment</b>.</div>
+      <div class="note" style="margin-top:10px"><b>Why cumulative ≠ sum of independents:</b> later rungs raise household electricity demand, which <b>increases the value of the PV + battery already installed</b> (more solar self-consumed, battery cycles more usefully, flexible EV/heat-pump load pairs with the dynamic tariff). The engine computes each rung <b>on top of the running state</b>, never in isolation.</div>
+    </div>
+
+    <div class="grid g2" style="margin-top:16px">
+      <div class="card">
+        <div style="font-weight:700;margin-bottom:6px">💶 Financing overlay (the anchor)</div>
+        <div class="mono">capex_after_subsidy = capex − subsidies
+installment = annuity(financed, apr, tenor)
+net_now      = gross_saving − installment
+net_after    = gross_saving   (loan gone)
+→ report both + break-even month</div>
+      </div>
+      <div class="card">
+        <div style="font-weight:700;margin-bottom:6px">🎯 Certainty (no false precision)</div>
+        <div class="row"><span class="dot"></span><div>Each default carries an uncertainty → propagate to a <b>band</b> (±€Y)</div></div>
+        <div class="row"><span class="dot a"></span><div>Name the biggest driver: "add roof orientation to tighten it"</div></div>
+        <div class="row"><span class="dot b"></span><div>Sensitivity = re-run on ± shocks to the 3 riskiest inputs</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. DATASETS -->
+  <section>
+    <div class="kicker"><div class="n">4</div><h2>Datasets the system needs<small>Pre-fetch &amp; cache the slow/region data — per-household math stays live</small></h2></div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <table>
+        <thead><tr><th>Tier</th><th>Data</th><th>Source</th><th>Use</th></tr></thead>
+        <tbody>
+          <tr><td><span class="tier t-must">MUST</span></td><td><b>Specific PV yield</b> (kWh/kWp)</td><td>PVGIS (EU JRC) — free</td><td>PV production from kWp</td></tr>
+          <tr><td><span class="tier t-acc">ACC</span></td><td>Hourly PV profile (TMY)</td><td>PVGIS seriescalc</td><td>Self-consumption sim</td></tr>
+          <tr><td><span class="tier t-must">MUST</span></td><td><b>Day-ahead spot price</b></td><td>aWATTar API (free), ENTSO-E, EPEX</td><td>Dynamic tariff, battery + EV arbitrage</td></tr>
+          <tr><td><span class="tier t-must">MUST</span></td><td>Retail price components</td><td>Stromsteuer, EEG levies, Konzessionsabgabe</td><td>Effective retail €/kWh</td></tr>
+          <tr><td><span class="tier t-must">MUST</span></td><td><b>Grid fees by region (PLZ)</b></td><td>Netztransparenz.de, BNetzA, BDEW</td><td>Zip-level price accuracy (bonus ask)</td></tr>
+          <tr><td><span class="tier t-must">MUST</span></td><td>Feed-in tariff (Einspeisevergütung)</td><td>EEG (~7–8 ct/kWh)</td><td>Value of exported PV</td></tr>
+          <tr><td><span class="tier t-must">MUST</span></td><td>Fuel prices (gas, oil, petrol)</td><td>public market indices</td><td>Spend → kWh / km</td></tr>
+          <tr><td><span class="tier t-must">MUST</span></td><td>SCOP by climate</td><td>manufacturer SCOP + DWD HDD</td><td>Heat → electricity</td></tr>
+          <tr><td><span class="tier t-acc">ACC</span></td><td>Heat demand benchmark (kWh/m²·a)</td><td>IWU / TABULA typology</td><td>Fill missing heating spend</td></tr>
+          <tr><td><span class="tier t-must">MUST</span></td><td><b>Heat-pump subsidy</b></td><td>KfW 458 / BEG — 30% base, up to <b>70% / €21k cap</b> (2026)</td><td>Reduce heat-pump capex</td></tr>
+          <tr><td><span class="tier t-must">MUST</span></td><td>Loan terms (APR, tenor)</td><td>Cloover financing product</td><td>Annuity → installment</td></tr>
+          <tr><td><span class="tier t-must">MUST</span></td><td>Equipment cost benchmarks</td><td>PV €1.3–1.6k/kWp · battery €600–900/kWh · HP €20–35k · wallbox €0.8–1.5k</td><td>Capex</td></tr>
+          <tr><td><span class="tier t-acc">ACC</span></td><td>Standard load profile</td><td>BDEW H0</td><td>Hourly self-consumption</td></tr>
+          <tr><td><span class="tier t-str">STR</span></td><td>Real smart-meter profile</td><td>user CSV upload</td><td>High-fidelity mode</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="legend">
+      <span><span class="tier t-must">MUST</span> credible demo</span>
+      <span><span class="tier t-acc">ACC</span> improves accuracy</span>
+      <span><span class="tier t-str">STR</span> stretch</span>
+    </div>
+    <div class="note warn" style="margin-top:14px">⚠️ <b>EV purchase grant (Umweltbonus) ended Dec 2023.</b> Model EV subsidy = <b>€0</b> unless a 2026 scheme is confirmed — avoid overstating the saving.</div>
+    <div class="note" style="margin-top:10px">🗄️ <b>Hackathon data strategy:</b> seed one JSON/SQLite reference set (a few PLZ regions with their grid fees, irradiance, climate, prices) so the demo runs <b>offline &amp; fast</b>. Live PVGIS/aWATTar calls are a toggle, not a dependency.</div>
+  </section>
+
+  <!-- 5. SYSTEM DESIGN -->
+  <section>
+    <div class="kicker"><div class="n">5</div><h2>System design<small>Contract-first · pure domain · LLM explains, never computes</small></h2></div>
+    <div class="card">
+      <div class="pipe">
+        <div class="stage"><span class="tag">in</span><div class="t">Intake</div><div class="d">form / LLM → schema</div></div>
+        <div class="arrow">→</div>
+        <div class="stage"><span class="tag">adapter</span><div class="t">Resolver</div><div class="d">enrich from datasets §4</div></div>
+        <div class="arrow">→</div>
+        <div class="stage pure"><span class="tag">pure</span><div class="t">Savings Engine</div><div class="d">3-bucket math, zero I/O, TDD</div></div>
+        <div class="arrow">→</div>
+        <div class="stage pure"><span class="tag">pure</span><div class="t">Optimiser</div><div class="d">pick max net saving</div></div>
+        <div class="arrow">→</div>
+        <div class="stage"><span class="tag">LLM</span><div class="t">Advisor</div><div class="d">explain + proposal copy</div></div>
+      </div>
+    </div>
+    <div class="grid g2" style="margin-top:16px">
+      <div class="card">
+        <div style="font-weight:700;margin-bottom:8px">Key decisions</div>
+        <div class="row"><span class="dot"></span><div><b>LLM computes nothing</b> — it narrates structured engine output (trust + testable)</div></div>
+        <div class="row"><span class="dot"></span><div><b>Contract-first</b>: <code>openapi.yaml</code> is the seam; FE uses generated client</div></div>
+        <div class="row"><span class="dot a"></span><div><b>Caching</b>: region data pre-fetched; per-request math in-memory</div></div>
+        <div class="row"><span class="dot b"></span><div><b>Demo determinism</b>: fixture path so a flaky API can't break the demo</div></div>
+        <div class="row"><span class="dot v"></span><div><b>Provider-agnostic LLM</b> adapter (Claude default)</div></div>
+      </div>
+      <div class="card">
+        <div style="font-weight:700;margin-bottom:8px"><code>POST /api/advise</code> — response sketch</div>
+        <div class="mono">{ recommended: "S4",
+  headlineSavingPerMonth: 142,
+  confidence: { low:105, high:175 },
+  breakEvenMonth: 0,
+  savingAfterPayoffPerMonth: 268,
+  buckets: { electricity:61, heating:55, mobility:26 },
+  financing: { capex, subsidies, installment:173 },
+  scenarios: [ S0..S4 … ],
+  explanation: "…LLM prose…",
+  proposalCopy: "…installer paste-in…",
+  assumptions: [ {field,value,source} ] }</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. UX -->
+  <section>
+    <div class="kicker"><div class="n">6</div><h2>Product UX<small>Make the one number unmissable, the honesty unmistakable</small></h2></div>
+    <div class="grid g3">
+      <div class="bucket"><h4>① Hero number</h4><div class="mono">"You save €142/mo" + honest curve sub-line + confidence chip</div></div>
+      <div class="bucket"><h4>② Honest timeline</h4><div class="mono">while-financing vs after-payoff + break-even marker — the trust builder</div></div>
+      <div class="bucket"><h4>③ Bucket breakdown</h4><div class="mono">elec / heat / mobility, each expandable to "why"</div></div>
+      <div class="bucket"><h4>④ Ladder compare</h4><div class="mono">rungs ①→④ stacking, recommended highlighted, "why not just solar?"</div></div>
+      <div class="bucket"><h4>⑤ Up-sell nudge</h4><div class="mono">"Still on oil? the HP is €55/mo of your saving"</div></div>
+      <div class="bucket"><h4>⑥ Assumptions drawer</h4><div class="mono">every default labelled + editable → re-runs &amp; tightens band live</div></div>
+    </div>
+    <div class="note" style="margin-top:14px">🟢 <b>Installer proposal export</b> — one button → LLM-written, paste-ready proposal text (PDF stretch). The literal deliverable the challenge names.</div>
+    <div class="card" style="margin-top:14px">
+      <div style="font-weight:700;margin-bottom:6px">⏯ Demo flow (90 sec)</div>
+      <div class="mono">type PLZ + 5 numbers → big saving appears → toggle "add heat pump" → number jumps
+→ open assumptions, change one → band tightens → click "Generate proposal" → copy appears</div>
+    </div>
+  </section>
+
+  <!-- 7. PITCH -->
+  <section>
+    <div class="kicker"><div class="n">7</div><h2>Judging pitch<small>5 slides — let the working product carry it</small></h2></div>
+    <div class="grid g3">
+      <div class="bucket"><h4>1 · The inversion</h4><div class="mono">financing-first is backwards; we sell the outcome</div></div>
+      <div class="bucket"><h4>2 · The North Star</h4><div class="mono">formula + honest two-phase curve</div></div>
+      <div class="bucket"><h4>3 · Live demo</h4><div class="mono">minimal input → biggest-saving config → proposal copy</div></div>
+      <div class="bucket"><h4>4 · Why credible</h4><div class="mono">pure engine + real DE data + LLM never computes</div></div>
+      <div class="bucket"><h4>5 · Up-sell &amp; fit</h4><div class="mono">bigger upgrade → bigger saving → more financed volume, sold honestly</div></div>
+    </div>
+  </section>
+
+  <!-- 8. BUILD PLAN -->
+  <section>
+    <div class="kicker"><div class="n">8</div><h2>Build plan to Sun 14:00<small>Contract-first so 4 people don't block each other</small></h2></div>
+    <div class="grid g2">
+      <div class="card" style="border-color:#2c6647">
+        <div style="font-weight:700;color:var(--green);margin-bottom:8px">MVP cut (must work)</div>
+        <div class="row"><span class="dot"></span><div>Tier-0 form → <code>/api/advise</code> → headline + curve + 3 buckets</div></div>
+        <div class="row"><span class="dot"></span><div>Heuristic self-consumption (no hourly sim for v1)</div></div>
+        <div class="row"><span class="dot"></span><div>Scenarios S1–S4 + optimiser pick</div></div>
+        <div class="row"><span class="dot"></span><div>Annuity + KfW heat-pump subsidy</div></div>
+        <div class="row"><span class="dot"></span><div>LLM explanation + proposal copy</div></div>
+        <div class="row"><span class="dot"></span><div>One reference PLZ dataset seeded (offline-safe)</div></div>
+      </div>
+      <div class="card">
+        <div style="font-weight:700;color:var(--blue);margin-bottom:8px">Stretch (only if MVP green)</div>
+        <div class="row"><span class="dot b"></span><div>8760-h self-consumption + battery arbitrage sim</div></div>
+        <div class="row"><span class="dot b"></span><div>Live PVGIS + aWATTar toggle</div></div>
+        <div class="row"><span class="dot b"></span><div>Zip-level grid-fee join (2–3 regions)</div></div>
+        <div class="row"><span class="dot b"></span><div>Conversational LLM intake</div></div>
+        <div class="row"><span class="dot b"></span><div>PDF proposal export</div></div>
+      </div>
+    </div>
+
+    <div class="grid g4" style="margin-top:16px">
+      <div class="bucket"><h4>👤 A · Engine</h4><div class="mono">Python TDD: 3-bucket math + optimiser. Owns credibility.</div></div>
+      <div class="bucket"><h4>👤 B · Data</h4><div class="mono">reference dataset + resolver + (stretch) live APIs</div></div>
+      <div class="bucket"><h4>👤 C · Frontend</h4><div class="mono">screens vs generated client + mock fixtures day 1</div></div>
+      <div class="bucket"><h4>👤 D · LLM + pitch</h4><div class="mono">explain/proposal prompt + slides + demo script</div></div>
+    </div>
+    <div class="note" style="margin-top:12px">⏱️ <b>First 2 hours:</b> freeze <code>openapi.yaml</code> (the §5 shape) so all four run in parallel.</div>
+
+    <div class="card" style="margin-top:16px">
+      <div style="font-weight:700;margin-bottom:8px">Top risks → de-risking</div>
+      <table>
+        <tbody>
+          <tr><td><b>Self-consumption ratio wrong</b></td><td>Use defensible literature table; show band; cite source in UI</td></tr>
+          <tr><td><b>Live API flakiness in demo</b></td><td>Seed offline reference dataset; APIs are a toggle</td></tr>
+          <tr><td><b>LLM hallucinates numbers</b></td><td>LLM only formats engine output; assert copy numbers == payload</td></tr>
+          <tr><td><b>Over-claiming subsidies (EV)</b></td><td>EV grant = €0 (Umweltbonus ended 2023); cite KfW for heat pump</td></tr>
+          <tr><td><b>Scope creep</b></td><td>MVP cut is the line; stretch only when green</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 9. OPEN QUESTIONS -->
+  <section>
+    <div class="kicker"><div class="n">9</div><h2>Open questions — decide next<small>Let's lock these together</small></h2></div>
+    <div class="card">
+      <div class="q"><span class="num">1</span><div><b>Market scope:</b> lock to Germany for the demo? <span class="rec">recommend: yes</span></div></div>
+      <div class="q"><span class="num">2</span><div><b>EV scope:</b> charging-cost swap only, or include car purchase capex? <span style="color:var(--muted)">— big effect on the number</span></div></div>
+      <div class="q"><span class="num">3</span><div><b>Self-consumption fidelity v1:</b> heuristic table vs hourly sim? <span class="rec">recommend: heuristic MVP, sim stretch</span></div></div>
+      <div class="q"><span class="num">4</span><div><b>Tariff:</b> assume household switches to dynamic tariff (so arbitrage counts), or keep flat-tariff baseline to compare?</div></div>
+      <div class="q"><span class="num">5</span><div><b>Confidence band:</b> show it (honest) or hide for a cleaner hero? <span class="rec">recommend: show, small</span></div></div>
+      <div class="q"><span class="num">6</span><div><b>Proposal output:</b> copy-to-clipboard text only for v1, or styled PDF too?</div></div>
+    </div>
+  </section>
+
+  <!-- APPENDIX -->
+  <section>
+    <div class="kicker"><div class="n">✎</div><h2>Worked example<small>Illustrative — to be replaced by the engine</small></h2></div>
+    <div class="card">
+      <div class="grid g4">
+        <div class="bucket"><h4>Today</h4><div class="amt">€435<span style="font-size:13px;color:var(--muted)">/mo</span></div><div class="mono">€95 elec + €180 oil + €160 petrol</div></div>
+        <div class="bucket"><h4>Capex</h4><div class="amt">€41k</div><div class="mono">9kWp PV + 8kWh batt + HP + wallbox · −€14k KfW</div></div>
+        <div class="bucket"><h4>Installment</h4><div class="amt">€173<span style="font-size:13px;color:var(--muted)">/mo</span></div><div class="mono">€27k financed · 120 mo · 5.9%</div></div>
+        <div class="bucket b-elec"><h4>Net saving</h4><div class="amt" style="color:var(--green)">€142<span style="font-size:13px;color:var(--muted)">/mo</span></div><div class="mono">≈ €315/mo after payoff</div></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="foot">
+    Data anchors: PVGIS (EU JRC) · aWATTar / Tibber day-ahead APIs · KfW 458 / BEG Heizungsförderung (2026: 30% base, up to 70% / €21k cap) · Umweltbonus ended Dec 2023.
+    Placeholder prices to be replaced with seeded current values before the demo. · Companion to <code>docs/heimwende-master-plan.md</code> · v0.1 living document.
+  </div>
+
+</div>
+</body>
+</html>
