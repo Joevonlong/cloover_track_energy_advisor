@@ -1,0 +1,158 @@
+{
+  "_note": "Golden fixture for the demo happy-path (?fixture=demo-detached). Final demo numbers are re-captured from the engine (F17) once it is wired; these illustrative values match the worked example in system_workflow.md §8 and the openapi.yaml example block. breakdown = per-bucket SAVING (sums to saving_after_payoff_eur), per the frozen contract.",
+  "current_monthly_spend_eur": 435,
+  "best": {
+    "scenario_id": "full-bundle",
+    "label": "☀️ Solar + 🔋 Battery + ♨️ Heat pump + 🚗 EV charger",
+    "breakdown": {
+      "electricity_eur_month": 124,
+      "heating_eur_month": 106,
+      "mobility_eur_month": 134
+    },
+    "capex": {
+      "gross_eur": 42000,
+      "subsidy_eur": 11000,
+      "after_subsidy_eur": 31000,
+      "subsidy_note": "€22k HP − 50% KfW 458 = €11k; PV/battery 0% VAT"
+    },
+    "installment_eur_month": 244,
+    "monthly_saving_eur": 120,
+    "saving_after_payoff_eur": 364,
+    "break_even_month": 156,
+    "confidence": {
+      "band_eur": 35,
+      "low_eur": 85,
+      "high_eur": 155,
+      "biggest_driver": "self-consumption ratio (autarky 0.60 ± 0.10)"
+    },
+    "payback_note": "€120/mo from day one; EV is the biggest single contributor"
+  },
+  "alternatives": [
+    {
+      "scenario_id": "pv-only",
+      "label": "☀️ Solar 9 kWp",
+      "breakdown": {
+        "electricity_eur_month": 80,
+        "heating_eur_month": 0,
+        "mobility_eur_month": 0
+      },
+      "capex": {
+        "gross_eur": 13050,
+        "subsidy_eur": 0,
+        "after_subsidy_eur": 13050,
+        "subsidy_note": "0% VAT (§12(3) UStG)"
+      },
+      "installment_eur_month": 103,
+      "monthly_saving_eur": -24,
+      "saving_after_payoff_eur": 80,
+      "break_even_month": 180,
+      "confidence": {
+        "band_eur": 15,
+        "low_eur": -39,
+        "high_eur": -9,
+        "biggest_driver": "local irradiance (PVGIS ±8%)"
+      },
+      "payback_note": "Mildly negative until loads electrified; feed-in alone doesn't cover loan"
+    },
+    {
+      "scenario_id": "pv-battery",
+      "label": "☀️ Solar + 🔋 Battery 8 kWh",
+      "breakdown": {
+        "electricity_eur_month": 124,
+        "heating_eur_month": 0,
+        "mobility_eur_month": 0
+      },
+      "capex": {
+        "gross_eur": 18650,
+        "subsidy_eur": 0,
+        "after_subsidy_eur": 18650,
+        "subsidy_note": "0% VAT (§12(3) UStG)"
+      },
+      "installment_eur_month": 147,
+      "monthly_saving_eur": -24,
+      "saving_after_payoff_eur": 124,
+      "break_even_month": 180,
+      "confidence": {
+        "band_eur": 20,
+        "low_eur": -44,
+        "high_eur": -4,
+        "biggest_driver": "dynamic tariff spread (SMARD ±€0.04/kWh)"
+      },
+      "payback_note": "Battery break-even; value unlocks when HP+EV add load"
+    },
+    {
+      "scenario_id": "pv-battery-hp",
+      "label": "☀️ Solar + 🔋 Battery + ♨️ Heat pump",
+      "breakdown": {
+        "electricity_eur_month": 124,
+        "heating_eur_month": 106,
+        "mobility_eur_month": 0
+      },
+      "capex": {
+        "gross_eur": 29650,
+        "subsidy_eur": 11000,
+        "after_subsidy_eur": 18650,
+        "subsidy_note": "HP: €22k − 50% KfW 458; PV+battery 0% VAT"
+      },
+      "installment_eur_month": 234,
+      "monthly_saving_eur": -4,
+      "saving_after_payoff_eur": 230,
+      "break_even_month": 178,
+      "confidence": {
+        "band_eur": 25,
+        "low_eur": -29,
+        "high_eur": 21,
+        "biggest_driver": "KfW subsidy rate (modelled 50%, range 30–70%)"
+      },
+      "payback_note": "Near break-even; heat pump displaces oil spend"
+    },
+    {
+      "scenario_id": "full-bundle",
+      "label": "☀️ Solar + 🔋 Battery + ♨️ Heat pump + 🚗 EV charger",
+      "breakdown": {
+        "electricity_eur_month": 124,
+        "heating_eur_month": 106,
+        "mobility_eur_month": 134
+      },
+      "capex": {
+        "gross_eur": 42000,
+        "subsidy_eur": 11000,
+        "after_subsidy_eur": 31000,
+        "subsidy_note": "€22k HP − 50% KfW 458 = €11k; PV/battery 0% VAT"
+      },
+      "installment_eur_month": 244,
+      "monthly_saving_eur": 120,
+      "saving_after_payoff_eur": 364,
+      "break_even_month": 156,
+      "confidence": {
+        "band_eur": 35,
+        "low_eur": 85,
+        "high_eur": 155,
+        "biggest_driver": "self-consumption ratio (autarky 0.60 ± 0.10)"
+      },
+      "payback_note": "€120/mo from day one; EV is the biggest single contributor"
+    }
+  ],
+  "upsell": {
+    "from_scenario_id": "pv-battery",
+    "to_scenario_id": "full-bundle",
+    "delta_eur_month": 144,
+    "reason_md": "Going from PV+battery (−€24/mo) to the full bundle lands **+€120/mo** because you're still burning oil + petrol that the heat pump and EV charger displace. The EV charger alone adds +€124/mo by swapping petrol (€1.85/L) for cheap home charging (≈€0.20/kWh)."
+  },
+  "explanation_md": "Ihr Haus ist ideal für das volle Paket: Die Wärmepumpe ersetzt Ihren Ölheizer und spart €106/mo brutto, der EV-Lader macht Ihr Auto deutlich günstiger als Benzin. Solar und Batterie decken tagsüber Ihren Eigenverbrauch und stabilisieren die Kosten langfristig gegen steigende Strompreise.",
+  "proposal_copy_md": "**Ihr persönlicher Energieplan — Heimwende × Cloover**\n\nMit dem vollen Paket (Solar 9 kWp · Batterie 8 kWh · Wärmepumpe · Wallbox) sparen Sie **€120/mo ab Tag eins** und **€364/mo nach Kreditende**. Finanzierung ab €244/mo (180 Mo., 5% p.a. nach KfW-Förderung).",
+  "assumptions": [
+    {
+      "field": "specific_yield_kwh_per_kwp",
+      "value": "980 kWh/kWp",
+      "source": "PVGIS fallback (PLZ 10115)",
+      "editable": true
+    },
+    {
+      "field": "kfw_subsidy_rate",
+      "value": "50%",
+      "source": "KfW 458 base 30% + Klima-Geschwindigkeitsbonus 20%",
+      "editable": true
+    }
+  ]
+}
