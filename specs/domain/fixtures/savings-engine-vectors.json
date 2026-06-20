@@ -1,0 +1,130 @@
+{
+  "pricing_context": {
+    "retail_price_eur_kwh": 0.37,
+    "feedin_price_eur_kwh": 0.0778,
+    "dynamic_spread_eur_kwh": 0.12,
+    "pv_per_kwp_eur": 1450.0,
+    "battery_per_kwh_eur": 700.0,
+    "heatpump_fixed_eur": 22000.0,
+    "wallbox_fixed_eur": 1200.0,
+    "oil_per_litre_eur": 1.1,
+    "gas_per_kwh_eur": 0.115,
+    "petrol_per_litre_eur": 1.85,
+    "diesel_per_litre_eur": 1.75,
+    "public_charge_per_kwh_eur": 0.45,
+    "home_charge_price_eur_kwh": 0.20,
+    "financing_apr": 0.05,
+    "financing_term_months": 180
+  },
+  "physics": {
+    "specific_yield_kwh_per_kwp": 980.0,
+    "autarky_pv_only": 0.30,
+    "autarky_with_battery": 0.60,
+    "battery_cycles_year": 300,
+    "battery_round_trip": 0.90,
+    "oil_kwh_per_litre": 10.0,
+    "oil_boiler_efficiency": 0.85,
+    "new_heatpump_scop": 3.5,
+    "petrol_l_per_100km": 7.0,
+    "ev_kwh_per_100km": 18.0
+  },
+  "V_WORKED_BASE": {
+    "input": {
+      "electricity_eur_month": 95.0,
+      "heating_eur_month": 180.0,
+      "mobility_eur_month": 160.0,
+      "km_year": 14800.0,
+      "pv_kwp": 9.0
+    },
+    "expected": {
+      "current_monthly_spend_eur": 435.0,
+      "annual_consumption_kwh": 3081.081081081081,
+      "heat_demand_kwh": 16690.90909090909,
+      "heatpump_electricity_kwh": 4768.831168831169,
+      "ev_kwh_year": 2664.0,
+      "pv_yield_kwh": 8820.0
+    }
+  },
+  "V_BATTERY_8KWH": {
+    "input": {
+      "base_load_kwh_year": 3081.0,
+      "battery_kwh": 8.0,
+      "capex_after_subsidy_eur": 5600.0
+    },
+    "expected": {
+      "extra_self_consumption_kwh": 924.3,
+      "extra_self_value_eur_year": 341.991,
+      "lost_feedin_eur_year": 71.91054,
+      "arbitrage_eur_year": 259.2,
+      "gross_eur_year": 529.28046,
+      "gross_eur_month": 44.106705,
+      "net_tolerance_eur_month": 1.0
+    }
+  },
+  "V_FINANCING_180M_5PCT": [
+    {
+      "layer": "solar",
+      "principal_eur": 13050.0,
+      "expected_installment_eur_month": 103.0
+    },
+    {
+      "layer": "battery",
+      "principal_eur": 5600.0,
+      "expected_installment_eur_month": 44.0
+    },
+    {
+      "layer": "heat_pump",
+      "principal_eur": 11000.0,
+      "expected_installment_eur_month": 87.0
+    },
+    {
+      "layer": "ev_charger",
+      "principal_eur": 1200.0,
+      "expected_installment_eur_month": 10.0
+    }
+  ],
+  "V_WORKED_LADDER": {
+    "tolerance_fraction": 0.15,
+    "steps": [
+      {
+        "layer": "solar",
+        "target_delta_net_eur_month": -24.0,
+        "target_cumulative_net_eur_month": -24.0,
+        "target_after_payoff_eur_month": 80.0
+      },
+      {
+        "layer": "battery",
+        "target_delta_net_eur_month": 0.0,
+        "target_cumulative_net_eur_month": -24.0,
+        "target_after_payoff_eur_month": 124.0
+      },
+      {
+        "layer": "heat_pump",
+        "target_delta_net_eur_month": 20.0,
+        "target_cumulative_net_eur_month": -4.0,
+        "target_after_payoff_eur_month": 230.0
+      },
+      {
+        "layer": "ev_charger",
+        "target_delta_net_eur_month": 124.0,
+        "target_cumulative_net_eur_month": 120.0,
+        "target_after_payoff_eur_month": 364.0
+      }
+    ],
+    "target_monthly_saving_eur": 120.0
+  },
+  "V_OWNED_EQUIPMENT": {
+    "input": {
+      "existing_pv_kwp": 5.0,
+      "recommended_pv_kwp": 9.0,
+      "existing_battery_kwh": 4.0,
+      "recommended_battery_kwh": 8.0
+    },
+    "expected": {
+      "added_pv_kwp": 4.0,
+      "total_pv_kwp": 9.0,
+      "added_battery_kwh": 4.0,
+      "total_battery_kwh": 8.0
+    }
+  }
+}
