@@ -1,7 +1,7 @@
 # =============================================================================
 # FROZEN CONTRACT — F02 (Heimwende Energy Advisor)
 # Do NOT edit without a reviewed PR that bumps the TS client in the same commit.
-# Source of truth: specs/api/openapi.yaml → generates apps/api models + apps/web types.
+# Source of truth: specs/api/openapi.yaml → generates apps/backend models + apps/frontend types.
 #
 # Per-layer "+€/mo" displayed in the configurator is derived by the FE as consecutive
 # differences of alternatives[].monthly_saving_eur (§6.1 / AC5):

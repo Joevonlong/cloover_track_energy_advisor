@@ -76,14 +76,14 @@ git clone git@github.com:Joevonlong/heimwende-energy-advisor.git
 cd heimwende-energy-advisor
 
 # 1) Backend — FastAPI on http://localhost:8000
-cd apps/api
+cd apps/backend
 cp .env.example .env            # fill keys later; the skeleton boots without them
 uv sync
 uv run uvicorn app.main:app --app-dir src --reload --port 8000
 #   check: curl http://localhost:8000/health  →  {"status":"ok",...}
 
 # 2) Frontend — Vite on http://localhost:5173  (new terminal)
-cd apps/web
+cd apps/frontend
 cp .env.example .env            # VITE_API_BASE_URL=http://localhost:8000
 pnpm install
 pnpm dev

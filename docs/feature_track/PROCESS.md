@@ -57,7 +57,7 @@ These come straight from `system_workflow.md` and the challenge. Violating one b
 2. **Contract-first.** `specs/api/openapi.yaml` is the seam. Freeze it in P0; the FE codes against the generated TS client, the BE implements the schema. Changing it = a deliberate, reviewed PR that bumps the client in the same change.
 3. **No secret in the frontend.** Vite inlines every `VITE_*` var into the public bundle, so the **only** FE env var is `VITE_API_BASE_URL`. All keys (Anthropic, Supabase service-role, Google) live in FastAPI's env. — *§1.*
 4. **No hard-coded prices.** Every monetary unit price is read from the Supabase `price_catalog` and injected into the pure engine via a `PricingContext`. The domain core imports no price. — *§12.*
-5. **Pure domain core.** `apps/api/src/app/domain/` is deterministic, zero-I/O, fully unit-tested. All I/O (HTTP, DB, LLM) lives in `adapters/`. This is where credibility lives — it is TDD'd against the §8 worked example.
+5. **Pure domain core.** `apps/backend/src/app/domain/` is deterministic, zero-I/O, fully unit-tested. All I/O (HTTP, DB, LLM) lives in `adapters/`. This is where credibility lives — it is TDD'd against the §8 worked example.
 6. **Honest over precision.** Show a confidence band and the biggest-uncertainty driver. Never print false precision. A near-zero or early-negative saving is shown honestly (it is a differentiator). — *§7, §8.1.*
 7. **Demo determinism.** A `?fixture=<id>` path returns a frozen payload; the reference dataset is seeded so the live demo has **zero hard external dependencies**. Live PVGIS/SMARD/Google are upgrade *toggles*, never the critical path. — *§1, §13.2.*
 
@@ -80,7 +80,7 @@ docs/
 ```
 
 > **Stack note / cleanup:** the plan mandates **Vite** (§1). Stale **Next.js** build artifacts
-> (`apps/web/.next/`) from an earlier attempt must be removed in F01 — see the risk in
+> (`apps/frontend/.next/`) from an earlier attempt must be removed in F01 — see the risk in
 > `FEATURE_BACKLOG.md`. Decision is recorded there; do not reintroduce a Next.js server tier.
 
 ## 6. Daily rhythm (lightweight, no ceremony)

@@ -23,7 +23,7 @@ estimate_h: 2
 ## 1. Intent (what & why)
 
 F25 is the submission pack required to qualify (HACKATHON_MANUAL §Submission Requirements). It delivers:
-a **public GitHub repo**, a **comprehensive README** (setup + run for both `apps/web` and `apps/api`,
+a **public GitHub repo**, a **comprehensive README** (setup + run for both `apps/frontend` and `apps/backend`,
 env vars, architecture, data sources/attribution, the engineering invariants), a **2-minute Loom video
 demo** (walking the §9 path), a **5-slide pitch deck**, and **documentation of every API/framework/tool**
 used. It must be done by **Sun 13:00** (TIMELINE) with a **hard opt-in deadline of Sun 14:00**
@@ -39,7 +39,7 @@ claimed number/source.
 
 **In scope**
 - **Public GitHub repo** — flip visibility to public, ensure no secret committed, license/README present (HACKATHON_MANUAL §Open Source Repository).
-- **Comprehensive README** — setup + run for **both `apps/web` (Vite SPA)** and **`apps/api` (FastAPI, `uv`)**; **env vars** (`VITE_API_BASE_URL` only client-side; all keys server-side); **architecture** (SPA→FastAPI BFF→domain core + adapters + Supabase, §1/§2); **data sources + attribution** (PVGIS, SMARD, OSM, KfW/BAFA/GEG, Destatis, Anthropic — §11); the **engineering invariants**.
+- **Comprehensive README** — setup + run for **both `apps/frontend` (Vite SPA)** and **`apps/backend` (FastAPI, `uv`)**; **env vars** (`VITE_API_BASE_URL` only client-side; all keys server-side); **architecture** (SPA→FastAPI BFF→domain core + adapters + Supabase, §1/§2); **data sources + attribution** (PVGIS, SMARD, OSM, KfW/BAFA/GEG, Destatis, Anthropic — §11); the **engineering invariants**.
 - **2-minute Loom video** (or equivalent) — solution explanation + **live walkthrough of the §9 90-sec demo path** (the F24 rehearsed path), inside the 2-min limit.
 - **5-slide pitch deck** following the fixed arc (R4).
 - **Documentation of all APIs/frameworks/tools** — a table mapping each (Vite/React/TS/Tailwind, FastAPI/Python/uv, Supabase, PVGIS/SMARD/aWATTar/OSM/Google-Solar, KfW/BAFA/GEG, Anthropic Claude) to where/why it's used (§11, §13).
@@ -58,7 +58,7 @@ claimed number/source.
 | # | Requirement | Source |
 |---|-------------|--------|
 | R1 | A **public GitHub repository** with the full source, no committed secret. | HACKATHON_MANUAL §Open Source Repository |
-| R2 | **README** runs both apps from clean: `apps/api` (`uv` install → seed Supabase → `uvicorn`) and `apps/web` (`pnpm/npm install` → `VITE_API_BASE_URL` → `vite dev`); a one-command/seeded **offline demo** path is documented (the `?fixture` route, F24). | HACKATHON_MANUAL §README; §1, §14.3 |
+| R2 | **README** runs both apps from clean: `apps/backend` (`uv` install → seed Supabase → `uvicorn`) and `apps/frontend` (`pnpm/npm install` → `VITE_API_BASE_URL` → `vite dev`); a one-command/seeded **offline demo** path is documented (the `?fixture` route, F24). | HACKATHON_MANUAL §README; §1, §14.3 |
 | R3 | README documents **env vars** (only `VITE_API_BASE_URL` client-side; Anthropic/Google/Supabase keys server-side), **architecture** (§1/§2 diagram), **data sources + attribution** (§11), and the **engineering invariants**. | §1, §2, §11, §15 |
 | R4 | **5-slide deck** follows the arc: (1) **the inversion** (today: install→financing→tariff bolted on; we sell the outcome) → (2) **the North-Star formula + honest curve** (`monthly_saving = current_spend − (installment + new_energy_cost)`; ≈cost-neutral now → €X after payoff) → (3) **live demo** (the §9 path) → (4) **why the number is credible** (official sources, 4 certainty drivers, load-aware self-consumption, transparent battery ≈€0) → (5) **up-sell wedge + Cloover business fit** (bigger upgrade ⇒ bigger saving; one product, one number). | Cloover challenge; §6.4, §7, §8, §9 |
 | R5 | **2-minute video** (Loom/equiv) = solution explanation + **live §9 walkthrough**, within 2:00. | HACKATHON_MANUAL §Project Presentation |
@@ -97,7 +97,7 @@ Claude · Supabase.
 ## 6. Acceptance criteria (testable — these become the tests)
 
 - [ ] **AC1 (repo public, no secret)** — Given the GitHub repo at submission, when opened logged-out, then it is **public**, builds, and a secret-scan/grep finds **no key** (only `VITE_API_BASE_URL` referenced; `.env` git-ignored).
-- [ ] **AC2 (README runs both apps from clean)** — Given a fresh clone, when a new dev follows the README, then **`apps/api`** starts (`uv` deps → seed → `uvicorn`) and **`apps/web`** starts (`install` → set `VITE_API_BASE_URL` → `vite dev`), and the **seeded/offline `?fixture` demo** renders the §8 headline — no missing step.
+- [ ] **AC2 (README runs both apps from clean)** — Given a fresh clone, when a new dev follows the README, then **`apps/backend`** starts (`uv` deps → seed → `uvicorn`) and **`apps/frontend`** starts (`install` → set `VITE_API_BASE_URL` → `vite dev`), and the **seeded/offline `?fixture` demo** renders the §8 headline — no missing step.
 - [ ] **AC3 (README content complete)** — Given the README, when reviewed, then it contains **env vars**, an **architecture** section (SPA→FastAPI BFF→domain+adapters+Supabase, §1/§2), **data sources + attribution** (§11), and the **engineering invariants** block (§4).
 - [ ] **AC4 (2-min video)** — Given the Loom link, when played, then it is **≤ 2:00**, explains the solution, and shows a **live §9 walkthrough** where the headline moves (solar → 🔋 ≈€0 → ♨️+🚗 jump → assumption edit → proposal).
 - [ ] **AC5 (5-slide deck arc)** — Given the deck, when reviewed, then it is **5 slides** in the exact R4 arc (inversion → North-Star formula + honest curve → live demo → why credible → up-sell + Cloover fit) and every number on it matches the F24 payload / §8.

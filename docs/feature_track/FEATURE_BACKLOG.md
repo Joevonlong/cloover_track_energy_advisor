@@ -16,7 +16,7 @@ Legend — **Owner:** 🟦 Zhou (backend/adapters/contract) · 🟩 Lukas (domai
 
 | Person | Primary surface | Owns features | Also |
 |--------|-----------------|---------------|------|
-| **Lukas** 🟩 | **Pure domain core** (`apps/api/src/app/domain/`) + **data-source verification** + the §10/§12 reference values | F03, F05–F11, **F27** | **Reviews every PR** (review gate); signs off all numbers/sources |
+| **Lukas** 🟩 | **Pure domain core** (`apps/backend/src/app/domain/`) + **data-source verification** + the §10/§12 reference values | F03, F05–F11, **F27** | **Reviews every PR** (review gate); signs off all numbers/sources |
 | **Zhou** 🟦 | **Backend BFF**: FastAPI, adapters, Supabase, the OpenAPI contract, persistence, fixtures | F01, F02, F04, F12–F17, **F26**, F24(be) | Owns contract changes |
 | **Philips** 🟪 | **Frontend**: Vite SPA, intake, configurator, dashboard, charts, proposal | F18–F23, F24(fe) | Owns demo UX feel |
 
@@ -179,7 +179,7 @@ F03 → F05 → F06 → F10 → F11 (engine) → F17. Protect these; everything 
 
 | Risk | Owner | Mitigation |
 |------|-------|-----------|
-| **Stale Next.js scaffold** contradicts the Vite decision (D2) | Zhou | F01 deletes `apps/web/.next/`; rebuild as Vite; CI has no Next.js |
+| **Stale Next.js scaffold** contradicts the Vite decision (D2) | Zhou | F01 deletes `apps/frontend/.next/`; rebuild as Vite; CI has no Next.js |
 | **Cloover APR/term unknown (D9)** | Lukas | default 5 %/180 mo, **labelled assumption** in UI + spec; ask a mentor in P0; one-line swap if confirmed |
 | Contract churn after P0 blocks parallelism | Zhou | freeze F02 in P0; later changes are reviewed PRs that bump the client same-commit |
 | Self-consumption ratio not credible → number doubted | Lukas | load-aware autarky (F06/F07), show band (F11), cite source; §8.1 transparent derivation |

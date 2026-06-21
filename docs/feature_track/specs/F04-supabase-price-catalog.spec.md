@@ -120,7 +120,7 @@ resolver (F12) reads and endpoints (F17) write; the wire contract is unaffected.
 
 ## 8. Dependencies & interfaces
 
-- **Upstream (needs):** **F01** (the `apps/api` app + env to hold the Supabase service-role key, which stays server-side per §11).
+- **Upstream (needs):** **F01** (the `apps/backend` app + env to hold the Supabase service-role key, which stays server-side per §11).
 - **Downstream (feeds):** **F12** (resolver reads `price_catalog` + `reference_plz` → `PricingContext`), **F13/F14** (write `cache_pvgis`/`cache_dynprice`), **F15** (reads `denkmal_seed`/`mastr_seed`), **F17/F23** (write `advise_run`/`proposal`). Backlog §5 (§12, §14.3 rows).
 - **Mock until ready:** consumers blocked on F04 mock `PricingContext` as in-memory constants matching the §12 seed (the same numbers in §4), then swap to the DB read once F04 lands.
 

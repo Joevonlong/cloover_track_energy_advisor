@@ -21,22 +21,22 @@ estimate_h: 1.5
 
 ## 1. Intent (what & why)
 
-Stand up the two-app monorepo the whole team builds in: `apps/web` (Vite + React + TS + Tailwind
-SPA) and `apps/api` (FastAPI, Python 3.12, `uv`), each with lint/format/test wired and a single root
+Stand up the two-app monorepo the whole team builds in: `apps/frontend` (Vite + React + TS + Tailwind
+SPA) and `apps/backend` (FastAPI, Python 3.12, `uv`), each with lint/format/test wired and a single root
 command to run both. Enforce the §1 architecture rule that **FastAPI is the only server and is the
-BFF** — Vite removes the Next.js server tier. **Critically, delete the stale Next.js `apps/web/.next/`
+BFF** — Vite removes the Next.js server tier. **Critically, delete the stale Next.js `apps/frontend/.next/`
 build artifacts and ensure no Next.js dependency remains** (locked decision D2). Refs §1.
 
 ## 2. Scope
 
 **In scope**
-- `apps/web`: Vite + React + TypeScript + Tailwind SPA scaffold (§1 frontend row).
-- `apps/api`: FastAPI on Python 3.12 managed by `uv` (§1 backend row), owning the pure domain core **and** acting as BFF.
+- `apps/frontend`: Vite + React + TypeScript + Tailwind SPA scaffold (§1 frontend row).
+- `apps/backend`: FastAPI on Python 3.12 managed by `uv` (§1 backend row), owning the pure domain core **and** acting as BFF.
 - Tooling: backend `ruff` (lint+format) + `mypy` (types) + `pytest`; frontend `eslint` + `tsc` + `vitest`.
 - Root run scripts: one command to start FE+BE for dev; one to run all checks (lint/type/test) across both apps.
 - Env hygiene: FE ships **only** `VITE_API_BASE_URL`; all keys (Anthropic, Google, Supabase service-role) live in FastAPI env (§1, §11). Provide `.env.example` documenting both sides.
 - CORS allows the Vite dev origin `http://localhost:5173` + deployed origin only (§1).
-- **Cleanup (D2):** delete `apps/web/.next/` and its stale `node_modules`; confirm no `next` dependency anywhere in the FE toolchain.
+- **Cleanup (D2):** delete `apps/frontend/.next/` and its stale `node_modules`; confirm no `next` dependency anywhere in the FE toolchain.
 
 **Out of scope** (explicitly, to prevent creep)
 - The OpenAPI contract + generated TS client → **F02**.
@@ -48,15 +48,15 @@ build artifacts and ensure no Next.js dependency remains** (locked decision D2).
 
 | # | Requirement | Source (§ in system_workflow.md) |
 |---|-------------|----------------------------------|
-| R1 | `apps/web` is a Vite + React + TS + Tailwind SPA; `npm/pnpm` dev server starts on `:5173`. | §1 (frontend) |
-| R2 | `apps/api` is a FastAPI app on Python 3.12, dependency-managed by `uv`; dev server starts (e.g. `:8000`). | §1 (backend) |
+| R1 | `apps/frontend` is a Vite + React + TS + Tailwind SPA; `npm/pnpm` dev server starts on `:5173`. | §1 (frontend) |
+| R2 | `apps/backend` is a FastAPI app on Python 3.12, dependency-managed by `uv`; dev server starts (e.g. `:8000`). | §1 (backend) |
 | R3 | Backend checks run clean on the scaffold: `ruff` (lint+format), `mypy`, `pytest`. | §1 |
 | R4 | Frontend checks run clean on the scaffold: `eslint`, `tsc --noEmit`, `vitest`. | §1 |
 | R5 | A single root script starts FE+BE together; a single root script runs all lint/type/test across both apps. | §1 (BFF/dev ergonomics) |
 | R6 | The only `VITE_*` var is `VITE_API_BASE_URL`; no secret/key is referenced in any FE file or `VITE_*` var. | §1, §11 |
 | R7 | `.env.example` exists documenting FE (`VITE_API_BASE_URL`) and BE (key placeholders) separately. | §1 |
 | R8 | CORS on FastAPI allows exactly `http://localhost:5173` + the deployed origin. | §1 |
-| R9 | `apps/web/.next/` is deleted and no `next` package appears in FE dependencies or lockfile (D2). | §1, D2 / Backlog §6 |
+| R9 | `apps/frontend/.next/` is deleted and no `next` package appears in FE dependencies or lockfile (D2). | §1, D2 / Backlog §6 |
 
 ## 4. Data, formulas & sources
 
@@ -75,7 +75,7 @@ exists to break.)
 - [ ] **AC1** — Given a clean checkout, when the root "dev" script runs, then the Vite SPA serves on `http://localhost:5173` and FastAPI serves on its port, both reachable.
 - [ ] **AC2** — Given the scaffold, when the root "check" script runs, then `ruff`, `mypy`, `pytest` (api) and `eslint`, `tsc`, `vitest` (web) all exit 0.
 - [ ] **AC3** — Given the FE source tree, when grepped for `VITE_`, then the only variable referenced is `VITE_API_BASE_URL`, and no Anthropic/Google/Supabase key string appears in any FE file or `VITE_*` var.
-- [ ] **AC4 (honesty/edge — D2 cleanup)** — Given the repo, when checked, then `apps/web/.next/` does not exist and no `next` entry appears in the FE `package.json` or lockfile.
+- [ ] **AC4 (honesty/edge — D2 cleanup)** — Given the repo, when checked, then `apps/frontend/.next/` does not exist and no `next` entry appears in the FE `package.json` or lockfile.
 - [ ] **AC5** — Given a request from `http://localhost:5173`, when it hits FastAPI, then CORS permits it; given an arbitrary disallowed origin, then CORS rejects it.
 - [ ] **AC6** — Given the repo root, when listed, then `.env.example` exists and documents FE and BE env separately, with no real secret values.
 
@@ -95,7 +95,7 @@ exists to break.)
 
 | Risk | Mitigation |
 |------|-----------|
-| Stale Next.js scaffold contradicts the Vite decision (D2) | F01 deletes `apps/web/.next/` and its `node_modules`; rebuild as Vite; verify no `next` dep (AC4) — Backlog §6, §15. |
+| Stale Next.js scaffold contradicts the Vite decision (D2) | F01 deletes `apps/frontend/.next/` and its `node_modules`; rebuild as Vite; verify no `next` dep (AC4) — Backlog §6, §15. |
 | A secret leaks into the Vite bundle | Only `VITE_API_BASE_URL` client-side; all keys in FastAPI env; AC3 greps for leaks (§1, §15). |
 | Tool versions drift between machines | Pin Python 3.12 + `uv` lockfile and the FE lockfile so the whole team is reproducible (§1). |
 | CORS misconfig blocks the demo or opens it wide | Allowlist exactly `:5173` + deployed origin (AC5), per §1. |

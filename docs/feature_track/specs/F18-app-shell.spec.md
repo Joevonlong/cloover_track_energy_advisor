@@ -33,7 +33,7 @@ the number's path to the UI. Refs §1, §9.
 ## 2. Scope
 
 **In scope**
-- Vite + React + TS scaffold (under `apps/web/`), Tailwind configured with design tokens (the green CTA
+- Vite + React + TS scaffold (under `apps/frontend/`), Tailwind configured with design tokens (the green CTA
   colour, the hero-number type scale), one app font, base layout shell.
 - Client-side routing for the demo flow: **Intake → Dashboard** (a single-page configurator dashboard,
   §9), with deep-linkable query params preserved (`?fixture`).
@@ -90,7 +90,7 @@ The shell never recomputes these — it transports `Recommendation.alternatives[
 
 ## 6. Acceptance criteria (testable — these become the tests)
 
-- [ ] **AC1 (boots as Vite SPA)** — Given the repo, when `pnpm dev` (or `npm run dev`) runs in `apps/web/`,
+- [ ] **AC1 (boots as Vite SPA)** — Given the repo, when `pnpm dev` (or `npm run dev`) runs in `apps/frontend/`,
   then a Vite dev server serves the SPA at `localhost:5173` with Tailwind styles applied and **no Next.js
   server** in the process tree (D2).
 - [ ] **AC2 (only VITE_API_BASE_URL)** — Given the built bundle, when grepped for secrets, then **only**
@@ -124,7 +124,7 @@ The shell never recomputes these — it transports `Recommendation.alternatives[
 ## 8. Dependencies & interfaces
 
 - **Upstream (needs):** **F02** (the frozen `openapi.yaml` → generated TS client + the `?fixture` param);
-  **F01** (the `apps/web` Vite layout + toolchain). At runtime, **F17** serves `/recommend`/`/site-check`
+  **F01** (the `apps/frontend` Vite layout + toolchain). At runtime, **F17** serves `/recommend`/`/site-check`
   and the `?fixture` golden payload; until F17 exists the shell uses a **bundled §8 fixture JSON** so it is
   never blocked on the backend (mock-first, Backlog §6).
 - **Downstream (feeds):** **F19** (intake posts a `Household` via the shell's mutation), **F20/F21/F22/F23**

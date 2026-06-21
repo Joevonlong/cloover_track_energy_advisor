@@ -1,7 +1,7 @@
 # Savings Engine — mathematical contract
 
 Status: frozen by F03. This document is the source of truth for the pure domain core in
-`apps/api/src/app/domain/`. The OpenAPI response shape remains owned by
+`apps/backend/src/app/domain/`. The OpenAPI response shape remains owned by
 `specs/api/openapi.yaml`.
 
 ## 1. Invariants

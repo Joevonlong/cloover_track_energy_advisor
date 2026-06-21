@@ -34,7 +34,7 @@ Optimal as the default CTA (§6.6, §9). The engine remains pure (zero I/O, zero
 ## 2. Scope
 
 **In scope**
-- `select_strategies(ladder: list[ScenarioResult]) → dict[str, Strategy]` — pure function in the domain core (`apps/api/src/app/domain/`).
+- `select_strategies(ladder: list[ScenarioResult]) → dict[str, Strategy]` — pure function in the domain core (`apps/backend/src/app/domain/`).
 - Three `Strategy` objects: `optimal`, `fastest_payback`, `long_term` — each a named pointer + label + one-line `rationale` string + `break_even_month`.
 - Contract extension: `Recommendation.strategies: Strategy[]` (three items) added to `specs/api/openapi.yaml` in the same PR (§14.1).
 - Tie-handling: documented rules for when two strategies coincide (same `ScenarioResult`), including the case where all three collapse to the same rung.

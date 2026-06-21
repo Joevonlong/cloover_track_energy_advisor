@@ -1,0 +1,80 @@
+{
+  "_note": "Input fixture for Am Nahholz 55, 74722 Buchen — 4 people, gas heating, 2 cars (petrol primary + diesel secondary). The domain model only supports one mobility slot; use the petrol entry below and note that the diesel car adds ~€110/mo on top (1,000 km/mo × 6.5L/100km × €1.70/L). Use `household` as the POST /api/v1/advisor/recommend body. Use `pricing_context` to call domain functions directly in tests.",
+
+  "household": {
+    "address": {
+      "street": "Am Nahholz",
+      "house_no": "55",
+      "city": "Buchen"
+    },
+    "plz": "74722",
+    "floor_area_m2": 165,
+    "building_year": 1985,
+    "occupants": 4,
+    "electricity_eur_month": 130,
+    "heating": {
+      "fuel": "GAS",
+      "eur_month": 160
+    },
+    "mobility": {
+      "kind": "PETROL",
+      "km_month": 1200,
+      "eur_month": null
+    },
+    "existing_pv_kwp": 0,
+    "existing_battery_kwh": 0,
+    "existing_heatpump_year": null,
+    "existing_heatpump_power_kw": null,
+    "existing_heatpump_scop": null,
+    "existing_ev": false,
+    "existing_ev_charger": false,
+    "selection": null
+  },
+
+  "_household_notes": {
+    "electricity_eur_month": "4 people × ~5,000 kWh/yr @ €0.34/kWh = ~€142/mo → rounded to €130",
+    "heating_eur_month": "165m² × 130 kWh/m²/yr (1985 build) = 21,450 kWh/yr gas @ €0.095/kWh = €170/mo → rounded to €160",
+    "mobility_km_month": "Primary car (petrol): ~1,200 km/mo × 8L/100km × €1.85/L ≈ €178/mo",
+    "diesel_secondary_car": "Second car (diesel): ~1,000 km/mo × 6.5L/100km × €1.70/L ≈ €110/mo — NOT in model, add manually if testing combined mobility",
+    "current_monthly_spend_total": "€130 electricity + €160 gas + €178 petrol = €468/mo (single-car baseline)"
+  },
+
+  "pricing_context": {
+    "plz": "74722",
+    "retail_price_eur_kwh": 0.34,
+    "feedin_price_eur_kwh": 0.082,
+    "grid_fee_eur_kwh": 0.07,
+    "dynamic_spread_eur_kwh": 0.04,
+    "pv_per_kwp_eur": 1400,
+    "battery_per_kwh_eur": 700,
+    "heatpump_fixed_eur": 18000,
+    "wallbox_fixed_eur": 1200,
+    "oil_per_litre_eur": 1.10,
+    "gas_per_kwh_eur": 0.095,
+    "petrol_per_litre_eur": 1.85,
+    "diesel_per_litre_eur": 1.70,
+    "public_charge_per_kwh_eur": 0.45,
+    "home_charge_price_eur_kwh": 0.20,
+    "financing_apr": 0.05,
+    "financing_term_months": 180
+  },
+
+  "solar_layer_form": {
+    "_note": "Direct input for solar_layer/pipeline.py generate_offer() — bypasses the API layer entirely.",
+    "energy_demand_kwh": 5000,
+    "energy_price_ct_kwh": 34,
+    "energy_price_increase_pct": 2,
+    "has_ev": false,
+    "ev_distance_km": null,
+    "has_solar": false,
+    "existing_solar_kwp": null,
+    "has_storage": false,
+    "has_wallbox": false,
+    "heating_existing_type": "Gas",
+    "heating_existing_heating_demand_wh": null,
+    "roof_type": "Concrete Tile Roof",
+    "max_modules": 28,
+    "preferred_brand": "auto",
+    "budget_cap_eur": null
+  }
+}
