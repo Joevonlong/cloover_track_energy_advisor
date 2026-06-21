@@ -25,13 +25,29 @@ export interface RoofPlacementSurface {
   azimuthDeg: number;
 }
 
+/** Which part of the building a geometry belongs to (drives its material). */
+export type GeometryKind = "wall" | "roof";
+
+/** What a roof builder produces before the dispatch attaches the footprint. */
+type RoofBuild = Omit<HouseGeometry, "footprint">;
+
 export interface HouseGeometry {
   /** Wall + roof meshes, ready to drop into a <mesh> each. */
   geometries: THREE.BufferGeometry[];
+  /** Parallel to `geometries`: whether each mesh is a wall or a roof plane. */
+  kinds: GeometryKind[];
   /** Explicit roof planes for downstream panel placement. */
   surfaces: RoofPlacementSurface[];
   /** Footprint half-extents — handy for framing the camera. */
   bounds: { halfLongM: number; halfShortM: number; ridgeHeightM: number };
+  /** Oriented footprint axes + wall height — anchors the toy module layer. */
+  footprint: {
+    u: { x: number; z: number };
+    v: { x: number; z: number };
+    halfLong: number;
+    halfShort: number;
+    wallHeightM: number;
+  };
 }
 
 // ── Footprint ────────────────────────────────────────────────────────────────
@@ -160,12 +176,32 @@ function wallGeometries(base: Vec3[], topY: number): THREE.BufferGeometry[] {
   });
 }
 
+/**
+ * Side walls where each base corner has its own top height — used by the shed
+ * roof, whose two long walls are trapezoids that follow the sloping eaves.
+ * `tops[i]` is the wall-top height above corner `base[i]`.
+ */
+function slopedWallGeometries(base: Vec3[], tops: number[]): THREE.BufferGeometry[] {
+  return base.map((a, i) => {
+    const j = (i + 1) % base.length;
+    const b = base[j];
+    return faceGeometry([
+      [a[0], 0, a[2]],
+      [b[0], 0, b[2]],
+      [b[0], tops[j], b[2]],
+      [a[0], tops[i], a[2]],
+    ]);
+  });
+}
+
 // ── Roof builders ─────────────────────────────────────────────────────────────
 
-function buildFlatRoof(fp: Footprint, wallHeightM: number): HouseGeometry {
+function buildFlatRoof(fp: Footprint, wallHeightM: number): RoofBuild {
   const base = corners(fp);
   const top = base.map<Vec3>(([x, , z]) => [x, wallHeightM, z]);
-  const geometries = [...wallGeometries(base, wallHeightM), faceGeometry(top)];
+  const walls = wallGeometries(base, wallHeightM);
+  const geometries = [...walls, faceGeometry(top)];
+  const kinds: GeometryKind[] = [...walls.map(() => "wall" as const), "roof"];
 
   const surface: RoofPlacementSurface = {
     id: "flat-0",
@@ -179,6 +215,7 @@ function buildFlatRoof(fp: Footprint, wallHeightM: number): HouseGeometry {
   };
   return {
     geometries,
+    kinds,
     surfaces: [surface],
     bounds: { halfLongM: fp.halfLong, halfShortM: fp.halfShort, ridgeHeightM: 0 },
   };
@@ -188,7 +225,7 @@ function buildGableRoof(
   fp: Footprint,
   wallHeightM: number,
   pitchDeg: number,
-): HouseGeometry {
+): RoofBuild {
   const { u, v, halfLong: L, halfShort: W } = fp;
   const pitchRad = (pitchDeg * Math.PI) / 180;
   const ridgeHeight = Math.tan(pitchRad) * W; // roofWidthM/2 = W
@@ -209,15 +246,18 @@ function buildGableRoof(
 
   const base = corners(fp);
   const geometries: THREE.BufferGeometry[] = [...wallGeometries(base, wallHeightM)];
+  const kinds: GeometryKind[] = base.map(() => "wall" as const);
 
-  // Gable-end triangles on the two short walls (u = ±L).
+  // Gable-end triangles on the two short walls (u = ±L) — still walls.
   geometries.push(faceGeometry([eaveAplus, eaveBplus, ridgePlus]));
   geometries.push(faceGeometry([eaveBminus, eaveAminus, ridgeMinus]));
+  kinds.push("wall", "wall");
 
   // Two sloped roof planes.
   const planeA: Vec3[] = [eaveAminus, eaveAplus, ridgePlus, ridgeMinus]; // faces +v
   const planeB: Vec3[] = [eaveBplus, eaveBminus, ridgeMinus, ridgePlus]; // faces −v
   geometries.push(faceGeometry(planeA), faceGeometry(planeB));
+  kinds.push("roof", "roof");
 
   const slopeLen = Math.hypot(W, ridgeHeight);
   const surfaces: RoofPlacementSurface[] = [
@@ -245,17 +285,160 @@ function buildGableRoof(
 
   return {
     geometries,
+    kinds,
     surfaces,
     bounds: { halfLongM: L, halfShortM: W, ridgeHeightM: ridgeHeight },
   };
 }
 
+function buildHipRoof(
+  fp: Footprint,
+  wallHeightM: number,
+  pitchDeg: number,
+): RoofBuild {
+  const { u, v, halfLong: L, halfShort: W } = fp;
+  const pitchRad = (pitchDeg * Math.PI) / 180;
+  const ridgeHeight = Math.tan(pitchRad) * W;
+  const ridgeY = wallHeightM + ridgeHeight;
+
+  // Standard equal-pitch hip: the ridge is inset from each gable end by the
+  // half-short-width W (the hip rafters run at 45° in plan). When L ≤ W the
+  // ridge collapses to a point and the roof becomes a pyramid.
+  const ridgeHalf = Math.max(L - W, 0);
+
+  const p = (su: number, sv: number, y: number): Vec3 => [
+    su * L * u.x + sv * W * v.x,
+    y,
+    su * L * u.z + sv * W * v.z,
+  ];
+  const eaveAplus = p(+1, +1, wallHeightM);
+  const eaveAminus = p(-1, +1, wallHeightM);
+  const eaveBplus = p(+1, -1, wallHeightM);
+  const eaveBminus = p(-1, -1, wallHeightM);
+  const ridgePt = (signU: number): Vec3 => [
+    signU * ridgeHalf * u.x,
+    ridgeY,
+    signU * ridgeHalf * u.z,
+  ];
+  const ridgePlus = ridgePt(+1);
+  const ridgeMinus = ridgePt(-1);
+
+  const base = corners(fp);
+  // All four walls are plain rectangles for a hip roof.
+  const geometries: THREE.BufferGeometry[] = [...wallGeometries(base, wallHeightM)];
+  const kinds: GeometryKind[] = base.map(() => "wall" as const);
+
+  // Two trapezoidal main slopes (face ±v) + two triangular hip ends (face ±u).
+  const planeA: Vec3[] = [eaveAminus, eaveAplus, ridgePlus, ridgeMinus]; // +v
+  const planeB: Vec3[] = [eaveBplus, eaveBminus, ridgeMinus, ridgePlus]; // −v
+  const hipEndPlus: Vec3[] = [eaveAplus, eaveBplus, ridgePlus]; // +u
+  const hipEndMinus: Vec3[] = [eaveBminus, eaveAminus, ridgeMinus]; // −u
+  geometries.push(
+    faceGeometry(planeA),
+    faceGeometry(planeB),
+    faceGeometry(hipEndPlus),
+    faceGeometry(hipEndMinus),
+  );
+  kinds.push("roof", "roof", "roof", "roof");
+
+  const slopeLen = Math.hypot(W, ridgeHeight);
+  const surfaces: RoofPlacementSurface[] = [
+    {
+      id: "hip-0",
+      roofType: "gable",
+      vertices: planeA,
+      normal: faceNormal(planeA[0], planeA[1], planeA[2]),
+      widthM: L * 2,
+      heightM: slopeLen,
+      pitchDeg,
+      azimuthDeg: bearingDeg(v),
+    },
+    {
+      id: "hip-1",
+      roofType: "gable",
+      vertices: planeB,
+      normal: faceNormal(planeB[0], planeB[1], planeB[2]),
+      widthM: L * 2,
+      heightM: slopeLen,
+      pitchDeg,
+      azimuthDeg: bearingDeg({ x: -v.x, z: -v.z }),
+    },
+    {
+      id: "hip-2",
+      roofType: "gable",
+      vertices: hipEndPlus,
+      normal: faceNormal(hipEndPlus[0], hipEndPlus[1], hipEndPlus[2]),
+      widthM: W * 2,
+      heightM: slopeLen,
+      pitchDeg,
+      azimuthDeg: bearingDeg(u),
+    },
+    {
+      id: "hip-3",
+      roofType: "gable",
+      vertices: hipEndMinus,
+      normal: faceNormal(hipEndMinus[0], hipEndMinus[1], hipEndMinus[2]),
+      widthM: W * 2,
+      heightM: slopeLen,
+      pitchDeg,
+      azimuthDeg: bearingDeg({ x: -u.x, z: -u.z }),
+    },
+  ];
+
+  return {
+    geometries,
+    kinds,
+    surfaces,
+    bounds: { halfLongM: L, halfShortM: W, ridgeHeightM: ridgeHeight },
+  };
+}
+
+function buildShedRoof(
+  fp: Footprint,
+  wallHeightM: number,
+  pitchDeg: number,
+): RoofBuild {
+  const { v, halfLong: L, halfShort: W } = fp;
+  const pitchRad = (pitchDeg * Math.PI) / 180;
+  // Single plane sloping across the short axis: low eave at v=+W, high at v=−W.
+  const rise = Math.tan(pitchRad) * (W * 2);
+  const lowY = wallHeightM;
+  const highY = wallHeightM + rise;
+
+  const base = corners(fp); // [c(+1,+1), c(-1,+1), c(-1,-1), c(+1,-1)]
+  // Per-corner wall-top height: v=+W corners are low, v=−W corners are high.
+  const tops = [lowY, lowY, highY, highY];
+  const geometries: THREE.BufferGeometry[] = [...slopedWallGeometries(base, tops)];
+  const kinds: GeometryKind[] = base.map(() => "wall" as const);
+
+  // Single sloped roof plane spanning the four wall-tops.
+  const plane: Vec3[] = base.map<Vec3>(([x, , z], i) => [x, tops[i], z]);
+  geometries.push(faceGeometry(plane));
+  kinds.push("roof");
+
+  const slopeLen = Math.hypot(W * 2, rise);
+  const surface: RoofPlacementSurface = {
+    id: "shed-0",
+    roofType: "gable",
+    vertices: plane,
+    normal: faceNormal(plane[0], plane[1], plane[2]),
+    widthM: L * 2,
+    heightM: slopeLen,
+    pitchDeg,
+    azimuthDeg: bearingDeg(v), // faces the low (downslope) side
+  };
+
+  return {
+    geometries,
+    kinds,
+    surfaces: [surface],
+    bounds: { halfLongM: L, halfShortM: W, ridgeHeightM: rise },
+  };
+}
+
 // ── Dispatch ──────────────────────────────────────────────────────────────────
 
-/**
- * Build the full house geometry from the (optional) drawn polygon + roof params.
- * hip/shed fall back to gable for the MVP (3d_building.md "Later versions").
- */
+/** Build the full house geometry from the (optional) drawn polygon + roof params. */
 export function buildHouseGeometry(
   polygon: LatLng[] | null,
   params: RoofParams,
@@ -265,9 +448,138 @@ export function buildHouseGeometry(
       ? orientedFootprint(latLngToLocal(polygon))
       : DEFAULT_FOOTPRINT;
 
-  if (params.roofType === "flat") {
-    return buildFlatRoof(fp, params.wallHeightM);
+  let build: RoofBuild;
+  switch (params.roofType) {
+    case "flat":
+      build = buildFlatRoof(fp, params.wallHeightM);
+      break;
+    case "hip":
+      build = buildHipRoof(fp, params.wallHeightM, params.pitchDeg);
+      break;
+    case "shed":
+      build = buildShedRoof(fp, params.wallHeightM, params.pitchDeg);
+      break;
+    case "gable":
+    default:
+      build = buildGableRoof(fp, params.wallHeightM, params.pitchDeg);
+      break;
   }
-  // gable | hip | shed → gable geometry for MVP.
-  return buildGableRoof(fp, params.wallHeightM, params.pitchDeg);
+
+  // Expose the oriented footprint so the toy module layer can anchor props to
+  // walls/corners that scale with the drawn polygon (3d_modules.md).
+  return {
+    ...build,
+    footprint: {
+      u: fp.u,
+      v: fp.v,
+      halfLong: fp.halfLong,
+      halfShort: fp.halfShort,
+      wallHeightM: params.wallHeightM,
+    },
+  };
+}
+
+// ── Module slots (toy layer) ────────────────────────────────────────────────
+// Anchor points for the four toggleable energy props. Each slot is keyed off the
+// oriented footprint axes (u/v), so it stays glued to the right wall/corner even
+// when the house is rotated to its real-world bearing. Spec: data/3d_modules.md.
+
+/** The four energy products that can be toggled onto the house. */
+export type ModuleKind = "pv" | "battery" | "heat_pump" | "ev";
+
+/** A resolved placement for one module, in local metre space. */
+export interface ModuleSlot {
+  kind: ModuleKind;
+  /** World position of the module's anchor (its base/back-centre). */
+  position: Vec3;
+  /** Y-rotation (radians) so the module's +z "front" faces outward. */
+  rotationY: number;
+  /** For roof-mounted modules (pv): the surface it lies on, for full tilt. */
+  surface?: RoofPlacementSurface;
+}
+
+/** Y-rotation that aims a +z-facing object along local direction (x,z). */
+function facingY(dir: { x: number; z: number }): number {
+  return Math.atan2(dir.x, dir.z);
+}
+
+/** Position from footprint axes: `au` along u (long), `av` along v (short). */
+function fpPoint(
+  fp: HouseGeometry["footprint"],
+  au: number,
+  av: number,
+  y: number,
+): Vec3 {
+  return [au * fp.u.x + av * fp.v.x, y, au * fp.u.z + av * fp.v.z];
+}
+
+/** Pick the roof surface whose aspect is closest to south (180°) for the panel. */
+function sunFacingSurface(surfaces: RoofPlacementSurface[]): RoofPlacementSurface {
+  let best = surfaces[0];
+  let bestDelta = Infinity;
+  for (const s of surfaces) {
+    // Angular distance to due south, in [0, 180].
+    const d = Math.abs(((s.azimuthDeg - 180 + 540) % 360) - 180);
+    if (d < bestDelta) {
+      bestDelta = d;
+      best = s;
+    }
+  }
+  return best;
+}
+
+/** Centroid of a polygon's vertices. */
+function centroid(verts: Vec3[]): Vec3 {
+  const s = verts.reduce(
+    (acc, [x, y, z]) => [acc[0] + x, acc[1] + y, acc[2] + z] as Vec3,
+    [0, 0, 0] as Vec3,
+  );
+  const n = verts.length;
+  return [s[0] / n, s[1] / n, s[2] / n];
+}
+
+/**
+ * Resolve all four module anchors from the built house geometry. Positions scale
+ * with the footprint; the toy renderer reads these and draws the props.
+ */
+export function moduleSlots(geo: HouseGeometry): Record<ModuleKind, ModuleSlot> {
+  const fp = geo.footprint;
+  const L = fp.halfLong;
+  const W = fp.halfShort;
+
+  // ☀️ Solar panel — flat on the sun-facing roof plane, lifted 0.05 m off it.
+  const surf = sunFacingSurface(geo.surfaces);
+  const c = centroid(surf.vertices);
+  const pvPos: Vec3 = [
+    c[0] + surf.normal[0] * 0.05,
+    c[1] + surf.normal[1] * 0.05,
+    c[2] + surf.normal[2] * 0.05,
+  ];
+
+  return {
+    pv: {
+      kind: "pv",
+      position: pvPos,
+      rotationY: 0, // orientation comes from the surface normal at render time
+      surface: surf,
+    },
+    // ♨️ Heat pump — on the ground against the +v long wall, near the −u end.
+    heat_pump: {
+      kind: "heat_pump",
+      position: fpPoint(fp, -0.35 * L, W + 0.8, 0),
+      rotationY: facingY(fp.v), // fan faces +v, away from the house
+    },
+    // 🔋 Battery — wall-mounted on the +u gable end, centred, bottom ~0.6 m up.
+    battery: {
+      kind: "battery",
+      position: fpPoint(fp, L, 0, 1.2),
+      rotationY: facingY(fp.u),
+    },
+    // 🚗 EV charger — wall-mounted on the −v front wall, near the +u corner.
+    ev: {
+      kind: "ev",
+      position: fpPoint(fp, 0.6 * L, -W, 1.1),
+      rotationY: facingY({ x: -fp.v.x, z: -fp.v.z }),
+    },
+  };
 }

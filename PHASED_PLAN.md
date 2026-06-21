@@ -1,69 +1,79 @@
-# Plan: Phase 4 — 3D Model Generation ("The Wow Moment")
+# Plan: Attachable 3D House Modules
+
+Toy/gimmick layer: four toggleable, animated energy props (☀️ solar panel,
+♨️ heat pump, 🔋 battery, 🚗 EV charger) on the live `viewing` 3D stage.
+Spec: `apps/frontend/data/3d_modules.md`. No new deps, no contract change, no
+money math. Toggles are always interactive; the recommendation auto-seeds them
+once when it first lands.
 
 ## Progress
-- [ ] Phase 4A: Geometry Engine
-- [ ] Phase 4B: R3F Canvas + Pactum Split-View Layout
-- [ ] Phase 4C: POST /recommend Wiring
+- [ ] Phase 1: Foundation — footprint exposure, anchor math, toggle bar
+- [ ] Phase 2: The four real modules + animations
+- [ ] Phase 3: Auto-seed from recommendation + polish
 
 ---
 
-## Phase 4A: Geometry Engine
-**Goal:** Pure TypeScript module converting `(LatLng[] | null) + RoofParams` → Three.js geometry + `RoofPlacementSurface[]`
-**Effort:** ~2h
+## Phase 1: Foundation — footprint exposure, anchor math, toggle bar
+**Goal:** Expose footprint axes from the geometry engine, add a `moduleSlots()`
+placement helper, and render an always-interactive toggle bar that pops one
+placeholder box onto the house.
+**Effort:** ~2–3 hours
 
 Steps:
-1. `pnpm add @react-three/fiber @react-three/drei` in `apps/frontend/`
-2. Create `src/features/viewer/roofGeometry.ts`:
-   - Define `RoofPlacementSurface` type (per `3d_building.md` spec)
-   - `latLngToLocal(polygon: LatLng[]): { x: number; z: number }[]` — Turf.js rhumbBearing + rhumbDistance to convert lat/lng corners to local metre-space
-   - `DEFAULT_FOOTPRINT` constant: 10m × 8m rectangle (used when polygon is null)
-   - `buildFlatRoof(footprint, wallHeightM)` → `{ geometries: BufferGeometry[]; surfaces: RoofPlacementSurface[] }`
-   - `buildGableRoof(footprint, wallHeightM, pitchDeg)` → same; ridge = `Math.tan(pitchRad) * (widthM / 2)`
-   - `buildHouseGeometry(polygon: LatLng[] | null, params: RoofParams)` — dispatches to flat/gable; hip/shed fall back to gable for MVP
-3. Fix hidden dep: add `useState<Household | null>` to `IntakeScreen` and wire `IntakeForm`'s `onComplete` to store it
+1. `roofGeometry.ts`: add `footprint: { u, v, halfLong, halfShort }` to
+   `HouseGeometry` and return it from all four builders.
+2. Add `ModuleKind` ("pv" | "battery" | "heat_pump" | "ev") and `ModuleSlot`
+   (kind, position, rotationY, optional surface).
+3. Add `moduleSlots(geo, params)` computing each anchor from the spec (heat pump
+   ground spot, battery +u wall, EV −v wall, PV = surface whose azimuth is
+   closest to south/180°).
+4. New `houseModules.tsx`: `<HouseModule kind slot>` rendering a placeholder box
+   with a drop/scale-in mount animation via `useFrame`.
+5. `HouseCanvas.tsx`: add `addons: Record<ModuleKind, boolean>` prop; memo slots;
+   render enabled modules inside the `<House>` group.
+6. `IntakeScreen.tsx`: `addons` state (all off) + floating chip toggle bar over
+   the stage; style in `index.css`.
+7. `pnpm typecheck` + `pnpm lint`; preview toggling across all roof types.
 
-**Risk:** Turf.js bearing computation must preserve real-world azimuth so panels face the correct direction later. Use `rhumbBearing` + `rhumbDistance`, not great-circle distance.
+**Risk:** PV sun-facing surface selection on flat/hip relies on `surfaces[]`
+azimuth; placeholder phase de-risks anchoring before real meshes.
 
 ---
 
-## Phase 4B: R3F Canvas + Pactum Split-View Layout
-**Goal:** Pactum-style full layout with animated 3D house on the left and activity feed on the right
-**Effort:** ~2h
+## Phase 2: The four real modules + animations
+**Goal:** Replace placeholders with the real props and their looping animations.
+**Effort:** ~3–4 hours
 
 Steps:
-1. Create `src/features/viewer/HouseCanvas.tsx`:
-   - `<Canvas>` with perspective camera (`fov 45`, positioned at `[0, 8, 14]`)
-   - `<ambientLight intensity={0.5}>` + `<directionalLight position={[5,10,5]} castShadow>`
-   - Ground plane mesh (subtle grey, 30m × 30m)
-   - House mesh group from `buildHouseGeometry` result; light grey `MeshStandardMaterial`
-   - Extrude-up animation: `useFrame` lerps `mesh.scale.y` 0→1 over ~1s
-   - `<OrbitControls enableDamping dampingFactor={0.05} />` from drei
-2. Create `src/features/activity/ActivityFeed.tsx`:
-   - Right panel styled to match Pactum: dark label "LIVE ACTIVITY", dot indicator, scrollable event list
-   - `ActivityEvent` type: `{ id, timestamp, label, status: 'ok' | 'warn' | 'info' | 'loading' }`
-   - Renders permit check results (✅ / 🟡 / ℹ️) + loading rows
-3. Add `"viewing"` to `IntakeScreen`'s `Step` union
-4. In `handleParamsNext`: compute geometry, store in state, transition to `"viewing"`
-5. Split-view when `step === "viewing"`:
-   - `GlobeBackground` hidden via CSS class
-   - Full-height flex row: `<HouseCanvas>` at `flex: 3`, `<ActivityFeed>` at `flex: 1`
-   - `StepBar` stays at top
-   - Modal card fades out via CSS opacity transition
+1. ☀️ Solar panel — single 1.7×1.0×0.04 m slab + frame + cell lines in the
+   surface plane (oriented via normal, +0.05 offset), glassy blue, emissive
+   glint sweep.
+2. ♨️ Heat pump — condenser box + recessed fan disc with blades + pipe stub;
+   fan spins, housing breathes ±2%, hub glows on a sine.
+3. 🔋 Battery — rounded slab + inset charge bar + edge LED; bar fills 0→100% then
+   holds, LED breathes.
+4. 🚗 EV charger — wallbox + emissive LED ring + curled cable; ring breathing +
+   travelling dot.
+5. Materials per spec, memoized.
+6. `pnpm typecheck` + `pnpm lint`; preview each on gable/hip/shed/flat.
 
-**Risk:** R3F `<Canvas>` requires fixed-height container — split-view parent must have `height: 100vh` minus StepBar height.
+**Risk:** Must memoize materials/geometries so toggling doesn't re-allocate.
 
 ---
 
-## Phase 4C: POST /recommend Wiring
-**Goal:** Fire the recommendation API when the viewer mounts, pipe results into the activity feed, store for Phase 5
-**Effort:** ~1h
+## Phase 3: Auto-seed from recommendation + polish
+**Goal:** Seed toggles once from the best scenario when the recommendation lands,
+plus final visual polish.
+**Effort:** ~1–2 hours
 
 Steps:
-1. Add `useState<Recommendation | null>` to `IntakeScreen`
-2. In `handleParamsNext`: call `postRecommend(household!)` immediately on transition to "viewing"
-3. Seed activity feed with `{ label: 'Solar wird berechnet...', status: 'loading' }`
-4. On success: append `{ label: 'Empfehlung bereit — €X/Monat', status: 'ok' }`, store `Recommendation`
-5. On error: append `{ label: 'Berechnung fehlgeschlagen', status: 'warn' }` + retry button
-6. In DEV: default to `?fixture=demo-detached` so we get a real response without a running backend
+1. `IntakeScreen.tsx`: track `userTouchedAddons`; when `recStatus` first flips to
+   `ready`, map `best`'s index in `alternatives[]` to the cumulative rung set and
+   seed `addons` — only if the user hasn't touched the toggles.
+2. Map `best.scenario_id` to its position in `alternatives[]` for the rung.
+3. Toggle-bar polish: active styling, emoji + label, entrance; ensure it doesn't
+   fight `OrbitControls` pointer events.
+4. Final `pnpm typecheck` + `pnpm lint` + full preview pass.
 
-**Risk:** `household` must be non-null when `handleParamsNext` fires (fixed in 4A). Add defensive guard.
+**Risk:** If `best.scenario_id` doesn't index `alternatives[]`, fall back to
+matching by `monthly_saving_eur`.

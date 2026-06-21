@@ -1,6 +1,7 @@
 // Top progress bar — shows the user where they are in the flow.
 // Light white bar with connecting lines, check icons for completed steps.
-import { Check, House } from "lucide-react";
+import { Check } from "lucide-react";
+import HeimwendeMark from "@/components/HeimwendeMark";
 
 export interface Step {
   label: string;
@@ -26,7 +27,7 @@ export default function StepBar({ currentStep }: StepBarProps) {
     >
       {/* Logo mark */}
       <div className="mr-8 flex shrink-0 items-center gap-2">
-        <House size={16} className="text-[#2f6fed]" strokeWidth={2} />
+        <HeimwendeMark size={22} />
         <span className="text-[13px] font-bold tracking-[-0.01em] text-text-1">Heimwende</span>
       </div>
 

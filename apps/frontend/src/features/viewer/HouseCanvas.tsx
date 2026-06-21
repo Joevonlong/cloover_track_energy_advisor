@@ -1,15 +1,34 @@
-// Phase 4B — R3F canvas. Renders the generated house with a soft extrude-up
-// animation, a ground plane, lighting and orbit controls. Pure presentation:
-// geometry comes pre-built from buildHouseGeometry().
+// Phase 4B — R3F canvas (light Pactum theme). Renders the generated house with
+// a soft extrude-up animation, a grounded contact shadow, lighting and orbit
+// controls. Pure presentation: geometry comes from buildHouseGeometry().
 import { useMemo, useRef } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { OrbitControls } from "@react-three/drei";
+import { OrbitControls, ContactShadows } from "@react-three/drei";
 import * as THREE from "three";
 import type { LatLng } from "@/features/roof/useMapboxDraw";
 import type { RoofParams } from "@/features/roof/RoofParamsStep";
-import { buildHouseGeometry } from "@/features/viewer/roofGeometry";
+import {
+  buildHouseGeometry,
+  moduleSlots,
+  type GeometryKind,
+  type ModuleKind,
+  type ModuleSlot,
+} from "@/features/viewer/roofGeometry";
+import HouseModule from "@/features/viewer/houseModules";
 
-function House({ geometries }: { geometries: THREE.BufferGeometry[] }) {
+const MODULE_KINDS: ModuleKind[] = ["pv", "battery", "heat_pump", "ev"];
+
+function House({
+  geometries,
+  kinds,
+  slots,
+  addons,
+}: {
+  geometries: THREE.BufferGeometry[];
+  kinds: GeometryKind[];
+  slots: Record<ModuleKind, ModuleSlot>;
+  addons: Record<ModuleKind, boolean>;
+}) {
   const group = useRef<THREE.Group>(null);
 
   // Extrude-up: lerp the group's vertical scale 0 → 1 over ~1s.
@@ -21,12 +40,22 @@ function House({ geometries }: { geometries: THREE.BufferGeometry[] }) {
     }
   });
 
-  const material = useMemo(
+  const wall = useMemo(
     () =>
       new THREE.MeshStandardMaterial({
-        color: "#d8dde2",
+        color: "#f4f6f9", // near-white walls
         roughness: 0.85,
-        metalness: 0.0,
+        metalness: 0,
+        side: THREE.DoubleSide,
+      }),
+    [],
+  );
+  const roof = useMemo(
+    () =>
+      new THREE.MeshStandardMaterial({
+        color: "#3f5b8b", // slate-blue roof for contrast
+        roughness: 0.6,
+        metalness: 0,
         side: THREE.DoubleSide,
       }),
     [],
@@ -35,7 +64,17 @@ function House({ geometries }: { geometries: THREE.BufferGeometry[] }) {
   return (
     <group ref={group} scale={[1, 0.001, 1]}>
       {geometries.map((geo, i) => (
-        <mesh key={i} geometry={geo} material={material} castShadow receiveShadow />
+        <mesh
+          key={i}
+          geometry={geo}
+          material={kinds[i] === "roof" ? roof : wall}
+          castShadow
+          receiveShadow
+        />
+      ))}
+      {/* Toy module layer — rises with the house's extrude-up animation. */}
+      {MODULE_KINDS.filter((k) => addons[k]).map((k) => (
+        <HouseModule key={k} slot={slots[k]} />
       ))}
     </group>
   );
@@ -44,52 +83,75 @@ function House({ geometries }: { geometries: THREE.BufferGeometry[] }) {
 export interface HouseCanvasProps {
   polygon: LatLng[] | null;
   params: RoofParams;
+  addons?: Record<ModuleKind, boolean>;
 }
 
-export default function HouseCanvas({ polygon, params }: HouseCanvasProps) {
-  const { geometries, bounds } = useMemo(
-    () => buildHouseGeometry(polygon, params),
-    [polygon, params],
-  );
+const NO_ADDONS: Record<ModuleKind, boolean> = {
+  pv: false,
+  battery: false,
+  heat_pump: false,
+  ev: false,
+};
 
-  // Frame the camera relative to the footprint size.
+export default function HouseCanvas({ polygon, params, addons }: HouseCanvasProps) {
+  const house = useMemo(() => buildHouseGeometry(polygon, params), [polygon, params]);
+  const { geometries, kinds, bounds } = house;
+  const slots = useMemo(() => moduleSlots(house), [house]);
+  const enabled = addons ?? NO_ADDONS;
+
+  // Frame the camera relative to the footprint size — pulled back for a clean
+  // 3/4 view that fits the whole house with headroom.
   const reach = Math.max(bounds.halfLongM, bounds.halfShortM, 4);
-  const camPos: [number, number, number] = [reach * 1.4, reach * 1.1, reach * 1.9];
+  const camPos: [number, number, number] = [reach * 1.9, reach * 1.6, reach * 2.7];
 
   return (
     <Canvas
       shadows
-      camera={{ fov: 45, position: camPos, near: 0.1, far: 200 }}
+      camera={{ fov: 42, position: camPos, near: 0.1, far: 400 }}
       dpr={[1, 2]}
       gl={{ antialias: true }}
     >
-      <color attach="background" args={["#0a1c22"]} />
-      <fog attach="fog" args={["#0a1c22", reach * 3, reach * 9]} />
+      <color attach="background" args={["#eef1f5"]} />
 
-      <ambientLight intensity={0.5} />
+      <ambientLight intensity={0.85} />
+      <hemisphereLight args={["#ffffff", "#c8cfd8", 0.6]} />
       <directionalLight
-        position={[reach, reach * 2, reach]}
-        intensity={1.4}
+        position={[reach, reach * 2.2, reach * 1.4]}
+        intensity={1.6}
         castShadow
-        shadow-mapSize-width={1024}
-        shadow-mapSize-height={1024}
+        shadow-mapSize-width={2048}
+        shadow-mapSize-height={2048}
+        shadow-camera-near={0.5}
+        shadow-camera-far={reach * 8}
+        shadow-camera-left={-reach * 2}
+        shadow-camera-right={reach * 2}
+        shadow-camera-top={reach * 2}
+        shadow-camera-bottom={-reach * 2}
       />
 
-      {/* Ground plane */}
+      {/* Light ground plane + soft contact shadow under the house. */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
-        <planeGeometry args={[reach * 8, reach * 8]} />
-        <meshStandardMaterial color="#0e2026" roughness={1} />
+        <planeGeometry args={[reach * 12, reach * 12]} />
+        <meshStandardMaterial color="#d8dde4" roughness={1} />
       </mesh>
+      <ContactShadows
+        position={[0, 0.02, 0]}
+        scale={reach * 4}
+        blur={2.4}
+        opacity={0.35}
+        far={reach * 2}
+      />
 
-      <House geometries={geometries} />
+      <House geometries={geometries} kinds={kinds} slots={slots} addons={enabled} />
 
       <OrbitControls
         enableDamping
         dampingFactor={0.05}
-        minDistance={reach}
+        enablePan={false}
+        minDistance={reach * 1.2}
         maxDistance={reach * 6}
         maxPolarAngle={Math.PI / 2.05}
-        target={[0, bounds.ridgeHeightM * 0.5 + 1.5, 0]}
+        target={[0, bounds.ridgeHeightM * 0.5 + 1.2, 0]}
       />
     </Canvas>
   );

@@ -8,10 +8,26 @@ import IntakeForm from "@/features/intake/IntakeForm";
 import RoofDrawStep from "@/features/roof/RoofDrawStep";
 import RoofParamsStep, { type RoofParams } from "@/features/roof/RoofParamsStep";
 import HouseCanvas from "@/features/viewer/HouseCanvas";
+import type { ModuleKind } from "@/features/viewer/roofGeometry";
 import ActivityFeed, { type ActivityEvent } from "@/features/activity/ActivityFeed";
 import type { LatLng } from "@/features/roof/useMapboxDraw";
 import { postRecommend } from "@/lib/api";
 import type { Household, Recommendation } from "@/lib/types";
+
+// Toggle bar entries, in savings-ladder order (3d_modules.md).
+const MODULE_TOGGLES: { kind: ModuleKind; emoji: string; label: string }[] = [
+  { kind: "pv", emoji: "☀️", label: "Solar" },
+  { kind: "battery", emoji: "🔋", label: "Battery" },
+  { kind: "heat_pump", emoji: "♨️", label: "Heat pump" },
+  { kind: "ev", emoji: "🚗", label: "EV charger" },
+];
+
+const NO_ADDONS: Record<ModuleKind, boolean> = {
+  pv: false,
+  battery: false,
+  heat_pump: false,
+  ev: false,
+};
 
 export interface IntakeScreenProps {
   onComplete?: (household: Household) => void;
@@ -34,9 +50,22 @@ function clock(): string {
 }
 
 let eventSeq = 0;
-function makeEvent(label: string, status: ActivityEvent["status"]): ActivityEvent {
-  return { id: `ev-${eventSeq++}`, timestamp: clock(), label, status };
+function makeEvent(
+  source: string,
+  label: string,
+  status: ActivityEvent["status"],
+): ActivityEvent {
+  return { id: `ev-${eventSeq++}`, timestamp: clock(), source, label, status };
 }
+
+const ROOF_LABEL: Record<RoofParams["roofType"], string> = {
+  flat: "Flat roof",
+  gable: "Gable roof",
+  hip: "Hip roof",
+  shed: "Shed roof",
+};
+
+type RecStatus = "idle" | "loading" | "ready" | "error";
 
 export default function IntakeScreen({ onComplete }: IntakeScreenProps) {
   const globeRef = useRef<GlobeHandle>(null);
@@ -46,7 +75,13 @@ export default function IntakeScreen({ onComplete }: IntakeScreenProps) {
   const [household, setHousehold] = useState<Household | null>(null);
   const [params, setParams] = useState<RoofParams | null>(null);
   const [events, setEvents] = useState<ActivityEvent[]>([]);
-  const [, setRecommendation] = useState<Recommendation | null>(null);
+  const [recommendation, setRecommendation] = useState<Recommendation | null>(null);
+  const [recStatus, setRecStatus] = useState<RecStatus>("idle");
+  // Toy module toggles — always interactive; auto-seeded once in Phase 3.
+  const [addons, setAddons] = useState<Record<ModuleKind, boolean>>(NO_ADDONS);
+
+  const toggleAddon = (kind: ModuleKind) =>
+    setAddons((prev) => ({ ...prev, [kind]: !prev[kind] }));
 
   const handleHousehold = (h: Household) => {
     setHousehold(h);
@@ -77,23 +112,30 @@ export default function IntakeScreen({ onComplete }: IntakeScreenProps) {
   };
 
   // Kick off the recommendation request and stream progress into the feed (4C).
-  const runRecommend = (h: Household) => {
-    setEvents([makeEvent("Solar wird berechnet…", "loading")]);
+  const runRecommend = (h: Household, p: RoofParams) => {
+    setRecStatus("loading");
+    setEvents([
+      makeEvent("Location", `${h.address.street} ${h.address.house_no}, ${h.plz}`, "ok"),
+      makeEvent("Roof model", `${ROOF_LABEL[p.roofType]} · ${p.pitchDeg}° pitch`, "ok"),
+      makeEvent("Solar layer", "Computing roof yield…", "loading"),
+    ]);
     // In DEV, use a golden fixture so we don't need a running backend.
     const opts = import.meta.env.DEV ? { fixture: "demo-detached" } : undefined;
     postRecommend(h, opts)
       .then((rec) => {
         setRecommendation(rec);
+        setRecStatus("ready");
         const eur = Math.round(rec.best.monthly_saving_eur);
         setEvents((prev) => [
           ...prev.map((e) => (e.status === "loading" ? { ...e, status: "ok" as const } : e)),
-          makeEvent(`Empfehlung bereit — €${eur}/Monat`, "ok"),
+          makeEvent("Recommendation", `€${eur}/month potential savings`, "ok"),
         ]);
       })
       .catch(() => {
+        setRecStatus("error");
         setEvents((prev) => [
           ...prev.map((e) => (e.status === "loading" ? { ...e, status: "warn" as const } : e)),
-          makeEvent("Berechnung fehlgeschlagen", "warn"),
+          makeEvent("Error", "Recommendation failed — backend offline?", "warn"),
         ]);
       });
   };
@@ -102,11 +144,12 @@ export default function IntakeScreen({ onComplete }: IntakeScreenProps) {
     setParams(p);
     setStep("viewing");
     if (household) {
-      runRecommend(household);
+      runRecommend(household, p);
     } else {
       // Defensive: household should be set from the intake form. Surface the gap
       // in the feed rather than firing /recommend with no body.
-      setEvents([makeEvent("Haushaltsdaten fehlen — bitte erneut starten", "warn")]);
+      setRecStatus("error");
+      setEvents([makeEvent("Error", "Household data missing — please restart", "warn")]);
     }
   };
 
@@ -137,7 +180,34 @@ export default function IntakeScreen({ onComplete }: IntakeScreenProps) {
       {step === "viewing" && params && (
         <div className="viewer-split">
           <div className="viewer-stage">
-            <HouseCanvas polygon={polygon} params={params} />
+            <div className="viewer-stage-header">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-3)]">
+                Live model
+              </p>
+              <h2 className="mt-0.5 text-[17px] font-bold tracking-[-0.01em] text-[var(--text-1)]">
+                {ROOF_LABEL[params.roofType]}
+                {params.roofType !== "flat" ? ` · ${params.pitchDeg}°` : ""}
+              </h2>
+            </div>
+
+            <HouseCanvas polygon={polygon} params={params} addons={addons} />
+
+            <div className="viewer-module-bar">
+              {MODULE_TOGGLES.map(({ kind, emoji, label }) => (
+                <button
+                  key={kind}
+                  type="button"
+                  onClick={() => toggleAddon(kind)}
+                  className={`viewer-module-chip${addons[kind] ? " viewer-module-chip--on" : ""}`}
+                  aria-pressed={addons[kind]}
+                >
+                  <span aria-hidden>{emoji}</span>
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            <StatusPill status={recStatus} recommendation={recommendation} />
           </div>
           <div className="viewer-feed">
             <ActivityFeed events={events} />
@@ -145,5 +215,38 @@ export default function IntakeScreen({ onComplete }: IntakeScreenProps) {
         </div>
       )}
     </main>
+  );
+}
+
+// Bottom-left status chip over the 3D stage (mirrors Pactum's status pill).
+function StatusPill({
+  status,
+  recommendation,
+}: {
+  status: RecStatus;
+  recommendation: Recommendation | null;
+}) {
+  if (status === "idle") return null;
+
+  const eur =
+    recommendation != null ? Math.round(recommendation.best.monthly_saving_eur) : null;
+
+  const config: Record<Exclude<RecStatus, "idle">, { dot: string; text: string }> = {
+    loading: { dot: "bg-[#d97706]", text: "Computing recommendation…" },
+    ready: {
+      dot: "bg-[#059669]",
+      text: eur != null ? `€${eur}/month possible` : "Recommendation ready",
+    },
+    error: { dot: "bg-[#dc2626]", text: "Recommendation failed" },
+  };
+  const c = config[status];
+
+  return (
+    <div className="viewer-status-pill">
+      <span
+        className={`h-2 w-2 rounded-full ${c.dot} ${status === "loading" ? "animate-pulse" : ""}`}
+      />
+      <span className="text-[13px] font-medium text-[var(--text-1)]">{c.text}</span>
+    </div>
   );
 }
