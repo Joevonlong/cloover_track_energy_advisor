@@ -23,12 +23,14 @@ from app.domain.models import (
 )
 from app.domain.savings.intake import normalise_household
 from app.domain.savings.scenarios import build_ladder
+from app.domain.savings.subsidy_layer.catalog import SubsidyContext
 
 
 def recommend(
     household: Household,
     ctx: PricingContext,
     specific_yield: float = SPECIFIC_YIELD_FALLBACK,
+    subsidies: SubsidyContext | None = None,
 ) -> Recommendation:
     """Compute the ranked recommendation.
 
@@ -42,6 +44,10 @@ def recommend(
         Annual PV yield in kWh/kWp for this location.
         Defaults to the PVGIS Germany fallback (980 kWh/kWp/yr).
         The resolver (F12) injects the site-specific value.
+    subsidies:
+        Layer 5 subsidy catalog context (KfW/BAFA/VAT).  Injected by the
+        service layer from ``resolve_subsidies``.  When ``None`` the engine
+        falls back to the frozen KfW constants (F03 worked example).
 
     Returns
     -------
@@ -51,7 +57,7 @@ def recommend(
     """
     nh = normalise_household(household, ctx)
 
-    alternatives = build_ladder(nh, ctx, specific_yield)
+    alternatives = build_ladder(nh, ctx, specific_yield, subsidies)
 
     # F27: best = rung with highest monthly_saving_eur
     best_idx = max(range(len(alternatives)), key=lambda i: alternatives[i].monthly_saving_eur)
