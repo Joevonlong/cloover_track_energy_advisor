@@ -1126,7 +1126,17 @@
   /* ─── Offer result page ──────────────────────────────────────
      Seen once per flow (the payoff screen), so sections earn a gentle
      staggered rise. translateY 10px, strong ease-out, never from scale(0).
-     (emil-design-eng) */
+     Grid overlay mirrors the landing page texture: fine lines at very low
+     opacity, masked to fade out halfway down the viewport. (emil-design-eng) */
+  .offer-grid {
+    background-image:
+      linear-gradient(rgb(18 24 38 / 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(18 24 38 / 0.05) 1px, transparent 1px);
+    background-size: 52px 52px;
+    mask-image: linear-gradient(to bottom, rgb(0 0 0 / 0.68) 0%, transparent 68%);
+    -webkit-mask-image: linear-gradient(to bottom, rgb(0 0 0 / 0.68) 0%, transparent 68%);
+  }
+
   @keyframes offer-rise {
     from {
       opacity: 0;

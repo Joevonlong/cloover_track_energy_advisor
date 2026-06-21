@@ -26,7 +26,7 @@ import {
   type StageGroup,
 } from "@/features/activity/pipeline";
 import HeimwendeMark from "@/components/HeimwendeMark";
-import type { PdfEvidence } from "./EnergyPlanPdf";
+import { postReport } from "@/lib/api";
 
 /* A real letter wants a real date. Formatted once per render — this is prose
    chrome, never a figure the math depends on. */
@@ -302,13 +302,14 @@ export default function OfferResultPage({
   onBack,
   events = [],
   run,
+  address,
 }: {
   rec: Recommendation;
   onBack: () => void;
-  /** The streamed AI-layer activity from the intake run (empty on skip-to-offers). */
   events?: ActivityEvent[];
-  /** The pipeline run state, used to surface what the AI layer actually checked. */
   run?: PipelineRunState;
+  /** Full address string for the PDF cover page, e.g. "Musterstraße 12, Berlin". */
+  address?: string;
 }) {
   const best = rec.best;
   const financeMonths = financeTermMonths(rec);
@@ -328,29 +329,20 @@ export default function OfferResultPage({
   async function handlePdfDownload() {
     setGeneratingPdf(true);
     try {
+      // Fetch LLM-generated narrative sections from the backend
+      const sections = await postReport(rec, address);
+
       const [pdfMod, docMod] = await Promise.all([
         import("@react-pdf/renderer"),
-        import("./EnergyPlanPdf"),
+        import("./NarrativePdf"),
       ]);
-      const evidence: PdfEvidence = {
-        roof: ai?.roof ?? undefined,
-        permits: ai?.permits
-          ? { value: ai.permits.value, ok: ai.permits.tone === "ok" }
-          : undefined,
-        subsidyValue: subsidyCard.value,
-        subsidySource: subsidyCard.source,
-        biggestDriver: best.confidence.biggest_driver,
-        confidenceLow: best.confidence.low_eur,
-        confidenceHigh: best.confidence.high_eur,
-        confidenceBand: best.confidence.band_eur,
-      };
-      const doc = createElement(docMod.EnergyPlanPdf, { rec, evidence });
+      const doc = createElement(docMod.NarrativePdf, { rec, sections, address });
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const blob = await pdfMod.pdf(doc as any).toBlob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "heimwende-energy-plan.pdf";
+      a.download = "heimwende-energy-advisory-report.pdf";
       a.click();
       URL.revokeObjectURL(url);
     } finally {
@@ -359,9 +351,18 @@ export default function OfferResultPage({
   }
 
   return (
-    <main className="min-h-screen bg-[#f6f8fc] text-[#0f172a]">
+    <main className="relative min-h-screen bg-[#f6f8fc] text-[#0f172a]">
+      {/* Decorative grid — mirrors landing page texture */}
+      <div aria-hidden className="offer-grid pointer-events-none fixed inset-0" />
+
       <header className="sticky top-0 z-20 border-b border-[#e7eaf0] bg-white/85 backdrop-blur-xl">
         <div className="mx-auto flex h-14 max-w-[1000px] items-center justify-between px-5">
+          {/* Brand */}
+          <div className="flex items-center gap-2.5">
+            <HeimwendeMark size={26} className="rounded-md shadow-[0_2px_8px_-2px_rgb(47_111_237/0.4)]" />
+            <span className="text-[15px] font-bold tracking-[-0.02em] text-[#0f172a]">Heimwende</span>
+          </div>
+          {/* Back */}
           <button
             type="button"
             onClick={onBack}
@@ -370,15 +371,19 @@ export default function OfferResultPage({
             <ArrowLeft size={16} strokeWidth={2.2} />
             Back to model
           </button>
-          <span className="text-[12px] font-semibold uppercase tracking-[0.14em] text-[#94a3b8]">
-            Your energy plan
-          </span>
         </div>
       </header>
 
-      <div className="mx-auto max-w-[1000px] space-y-6 px-5 py-8 sm:py-10">
+      <div className="relative z-10 mx-auto max-w-[1000px] space-y-6 px-5 py-8 sm:py-10">
+        {/* ── Page title ───────────────────────────────────────────────── */}
+        <div className="offer-rise pb-2" style={{ animationDelay: "0ms" }}>
+          <h1 className="text-[40px] font-extrabold leading-[0.95] tracking-[-0.04em] text-[#0f172a] sm:text-[56px]">
+            Your Energy Plan
+          </h1>
+        </div>
+
         {/* ── Choose a package ─────────────────────────────────────────── */}
-        <Section title="Choose your package" delay={0}>
+        <Section title="Choose your package" delay={80}>
           <div className="grid items-start gap-4 lg:grid-cols-3">
             {rec.tiers.map((tier, index) => (
               <TierCard
@@ -393,7 +398,7 @@ export default function OfferResultPage({
         </Section>
 
         {/* ── What we checked ──────────────────────────────────────────── */}
-        <Section title="What we checked" delay={60}>
+        <Section title="What we checked" delay={140}>
           <div className="grid gap-3 sm:grid-cols-2">
             <Evidence
               icon={Database}
@@ -435,13 +440,13 @@ export default function OfferResultPage({
 
         {/* ── Data & assumptions ───────────────────────────────────────── */}
         {rec.assumptions.length > 0 && (
-          <section className="offer-rise" style={{ animationDelay: "120ms" }}>
+          <section className="offer-rise" style={{ animationDelay: "200ms" }}>
             <SourceList assumptions={rec.assumptions} />
           </section>
         )}
 
         {/* ── Advisor letter ───────────────────────────────────────────── */}
-        <Section title="Personal advisor recommendation letter" delay={180}>
+        <Section title="Personal advisor recommendation letter" delay={260}>
           <article className="overflow-hidden rounded-2xl border border-[#e7eaf0] bg-white shadow-[0_18px_50px_-30px_rgb(15_23_42/0.2)]">
             {/* Letterhead */}
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#eef1f6] bg-[#fafbfe] px-6 py-3.5 sm:px-8">
@@ -495,7 +500,7 @@ export default function OfferResultPage({
         {/* ── Continue / export ────────────────────────────────────────── */}
         <section
           className="offer-rise flex flex-col gap-5 rounded-2xl border border-[#d4e0fb] bg-gradient-to-br from-[#eef3fd] to-[#e2ebfb] p-7 sm:flex-row sm:items-center sm:justify-between"
-          style={{ animationDelay: "240ms" }}
+          style={{ animationDelay: "320ms" }}
         >
           <div>
             <p className="text-[17px] font-semibold tracking-[-0.01em] text-[#0f172a]">Ready to continue</p>
@@ -673,7 +678,7 @@ function TierCard({
   return (
     <div
       className={`offer-rise relative ${TIER_STEP[index] ?? "lg:mt-0"}`}
-      style={{ animationDelay: `${80 + index * 70}ms` }}
+      style={{ animationDelay: `${160 + index * 70}ms` }}
     >
       {recommended && (
         <div

@@ -317,6 +317,11 @@ export default function IntakeScreen({ onComplete }: IntakeScreenProps) {
         onBack={() => setShowOfferPage(false)}
         events={events}
         run={runState}
+        address={
+          household
+            ? `${household.address.street} ${household.address.house_no}, ${household.address.city}`
+            : undefined
+        }
       />
     );
   }

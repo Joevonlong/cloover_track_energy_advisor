@@ -4,7 +4,7 @@ import IntakeScreen from "@/features/intake/IntakeScreen";
 import ErrorBoundary from "@/components/ErrorBoundary";
 
 export default function App() {
-  const [showLanding, setShowLanding] = useState(false);
+  const [showLanding, setShowLanding] = useState(true);
 
   return (
     <ErrorBoundary label="IntakeScreen">

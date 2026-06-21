@@ -3,6 +3,11 @@
 import type { PipelineEvent } from "@/features/activity/pipeline";
 import type { Household, Recommendation } from "./types";
 
+export interface ReportSection {
+  heading: string;
+  body: string;
+}
+
 const BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 
 export async function getHealth(): Promise<{ status: string }> {
@@ -23,6 +28,20 @@ export async function postRecommend(
   });
   if (!res.ok) throw new Error(`recommend ${res.status}`);
   return res.json();
+}
+
+export async function postReport(
+  rec: Recommendation,
+  address?: string,
+): Promise<ReportSection[]> {
+  const res = await fetch(`${BASE}/api/v1/advisor/report`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ recommendation: rec, address: address ?? null }),
+  });
+  if (!res.ok) throw new Error(`report ${res.status}`);
+  const data = await res.json();
+  return data.sections as ReportSection[];
 }
 
 /**

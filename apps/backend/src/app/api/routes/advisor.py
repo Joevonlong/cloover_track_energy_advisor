@@ -18,6 +18,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 
 from app.domain.models import (
     Household,
@@ -25,6 +26,25 @@ from app.domain.models import (
     SiteCheckRequest,
     SiteCheckResponse,
 )
+
+
+# ---------------------------------------------------------------------------
+# Narrative report types (not part of the frozen F02 contract)
+# ---------------------------------------------------------------------------
+
+
+class ReportSection(BaseModel):
+    heading: str
+    body: str
+
+
+class ReportRequest(BaseModel):
+    recommendation: Recommendation
+    address: str | None = None
+
+
+class ReportResponse(BaseModel):
+    sections: list[ReportSection]
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/advisor", tags=["advisor"])
@@ -125,6 +145,42 @@ def site_check(
             status_code=500,
             detail=f"Site-check failed: {exc!s}",
         ) from exc
+
+
+# ---------------------------------------------------------------------------
+# /report  (LLM narrative PDF report)
+# ---------------------------------------------------------------------------
+
+
+@router.post("/report", response_model=ReportResponse)
+def generate_report(body: ReportRequest) -> ReportResponse:
+    """Generate a 6-section LLM-written advisory report from a Recommendation.
+
+    Used by the frontend PDF download button to produce a narrative document
+    instead of the structured-data PDF.
+    Falls back to deterministic stub copy when ANTHROPIC_API_KEY is not set.
+    """
+    from app.core.config import get_settings
+
+    settings = get_settings()
+    rec_dict = body.recommendation.model_dump()
+
+    if settings.anthropic_api_key:
+        from app.adapters.llm.claude import generate_report_sections
+
+        raw_sections = generate_report_sections(
+            rec_dict,
+            api_key=settings.anthropic_api_key,
+            address=body.address,
+        )
+    else:
+        from app.adapters.llm.stub import generate_report_sections_stub
+
+        raw_sections = generate_report_sections_stub(rec_dict, body.address)
+
+    return ReportResponse(
+        sections=[ReportSection(**s) for s in raw_sections]
+    )
 
 
 # ---------------------------------------------------------------------------

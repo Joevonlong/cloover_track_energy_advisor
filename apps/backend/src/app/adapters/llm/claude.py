@@ -183,3 +183,159 @@ def _parse_response(raw: str) -> dict[str, Any]:
     if match:
         return dict(json.loads(match.group()))
     raise ValueError(f"Could not parse JSON from Claude response: {raw[:200]}")
+
+
+# ---------------------------------------------------------------------------
+# Narrative report generation
+# ---------------------------------------------------------------------------
+
+
+def generate_report_sections(
+    rec_dict: dict[str, Any],
+    api_key: str,
+    address: str | None = None,
+    model: str = "claude-opus-4-8",
+) -> list[dict[str, str]]:
+    """Call Claude to write a 6-section advisory report from a Recommendation dict.
+
+    Returns a list of {heading, body} dicts. Falls back to deterministic stub
+    text on failure so the PDF download never crashes.
+    """
+    try:
+        prompt = _build_report_prompt(rec_dict, address)
+        with httpx.Client(timeout=45.0) as client:
+            resp = client.post(
+                _ANTHROPIC_API_URL,
+                headers={
+                    "x-api-key": api_key,
+                    "anthropic-version": "2023-06-01",
+                    "content-type": "application/json",
+                },
+                content=json.dumps(
+                    {
+                        "model": model,
+                        "max_tokens": 2000,
+                        "messages": [{"role": "user", "content": prompt}],
+                    }
+                ),
+            )
+            resp.raise_for_status()
+            raw = str(resp.json()["content"][0]["text"])
+        sections = _parse_report_sections(raw, rec_dict)
+        if sections:
+            return sections
+    except Exception:
+        logger.warning("generate_report_sections failed — using stub", exc_info=True)
+
+    from app.adapters.llm.stub import generate_report_sections_stub
+    return generate_report_sections_stub(rec_dict, address)
+
+
+def _build_report_prompt(rec_dict: dict[str, Any], address: str | None) -> str:
+    best = rec_dict.get("best", {})
+    capex = best.get("capex", {})
+    conf = best.get("confidence", {})
+    current_spend = rec_dict.get("current_monthly_spend_eur", 0)
+    saving_now = best.get("monthly_saving_eur", 0)
+    saving_after = best.get("saving_after_payoff_eur", 0)
+    installment = best.get("installment_eur_month", 0)
+    gross = capex.get("gross_eur", 0)
+    subsidy = capex.get("subsidy_eur", 0)
+    net_inv = capex.get("after_subsidy_eur", 0)
+    subsidy_note = capex.get("subsidy_note", "")
+    break_even = best.get("break_even_month", 0)
+    conf_low = conf.get("low_eur", 0)
+    conf_high = conf.get("high_eur", 0)
+    driver = conf.get("biggest_driver", "")
+
+    tiers = rec_dict.get("tiers", [])
+    tier_lines = []
+    for t in tiers:
+        tier_lines.append(
+            f"- {t.get('name','')}: saves €{t.get('monthly_saving_eur',0):.0f}/mo now,"
+            f" €{t.get('saving_after_payoff_eur',0):.0f}/mo after payoff"
+            f" (financing €{t.get('installment_eur_month',0):.0f}/mo,"
+            f" net investment €{t.get('capex_after_subsidy_eur',0):.0f})"
+        )
+    tier_block = "\n".join(tier_lines)
+
+    assumptions = rec_dict.get("assumptions", [])
+    key_fields = {
+        "roof_area_usable_m2", "pv_system_kwp", "panel_count", "roof_orientation",
+        "specific_yield_kwh_per_kwp", "heat_pump_cop", "denkmal_listed",
+        "mastr_neighbour_count", "kfw_subsidy_rate", "climate_zone",
+    }
+    assumption_lines = [
+        f"- {a.get('field','')}: {a.get('value','')} ({a.get('source','')})"
+        for a in assumptions if a.get("field","") in key_fields
+    ]
+    assumption_block = "\n".join(assumption_lines) if assumption_lines else "(none)"
+
+    address_line = f"Property address: {address}" if address else ""
+
+    return f"""You are Heimwende, a professional home-energy advisor. Write a formal advisory report in English.
+{address_line}
+
+AUTHORITATIVE NUMBERS — cite ONLY these € figures in the report (do not invent new ones):
+- Current monthly energy spend: €{current_spend:.0f}/month
+- Saving from day one (net of installment): €{saving_now:.0f}/month
+- Saving after financing ends: €{saving_after:.0f}/month
+- Monthly financing installment: €{installment:.0f}/month
+- Total investment before subsidies: €{gross:.0f}
+- Subsidies applied: €{subsidy:.0f} ({subsidy_note})
+- Net investment after subsidies: €{net_inv:.0f}
+- Break-even: month {break_even}
+- Confidence range: €{conf_low:.0f}–€{conf_high:.0f}/month (biggest uncertainty: {driver})
+
+THREE PACKAGES:
+{tier_block}
+
+KEY PROPERTY DATA (reference qualitatively — no new € amounts):
+{assumption_block}
+
+Write a JSON object with exactly 6 sections. Each section has a "heading" (string) and "body" (string, 3-4 fluent sentences, plain prose, no markdown symbols, no bullet points).
+
+Sections must be:
+1. "Executive Summary" — headline saving, what the upgrade means for this household
+2. "Property and Solar Analysis" — roof data, PV sizing, annual yield potential
+3. "German Permit and Regulation Status" — what checks passed, regulatory outlook
+4. "Three Upgrade Packages" — compare the three tiers, who each suits, no new € amounts beyond the package figures above
+5. "Subsidies and Financing" — KfW/VAT details, financing structure, net cost
+6. "Our Recommendation and Next Steps" — which package, why, concrete action
+
+Return ONLY valid JSON:
+{{"sections": [{{"heading": "...", "body": "..."}}, ...]}}"""
+
+
+def _parse_report_sections(raw: str, rec_dict: dict[str, Any]) -> list[dict[str, str]]:
+    """Extract and validate the sections array from the Claude response."""
+    import re
+    from app.adapters.llm.base import assert_numbers_grounded
+
+    # Try to find the JSON object (may be wrapped in ```json ... ```)
+    match = re.search(r'\{.*"sections"\s*:\s*\[.*?\]\s*\}', raw, re.DOTALL)
+    if not match:
+        match = re.search(r'\{.*\}', raw, re.DOTALL)
+    if not match:
+        return []
+
+    try:
+        data = json.loads(match.group())
+    except json.JSONDecodeError:
+        return []
+
+    sections = data.get("sections", [])
+    if not isinstance(sections, list) or not sections:
+        return []
+
+    # Validate all bodies pass the number guard
+    all_text = " ".join(s.get("body", "") for s in sections)
+    if not assert_numbers_grounded(all_text, rec_dict):
+        logger.warning("Report number guard failed — falling back to stub")
+        return []
+
+    return [
+        {"heading": str(s.get("heading", "")), "body": str(s.get("body", ""))}
+        for s in sections
+        if s.get("heading") and s.get("body")
+    ]
