@@ -41,6 +41,20 @@ from app.domain.savings.ev_layer import (
     ev_kwh_year,
     new_mobility_cost_year,
 )
+from app.domain.savings.subsidy_layer.catalog import SubsidyContext
+
+
+def _resolve_hp_rate(subsidies: SubsidyContext | None, *, is_old_hp: bool) -> float:
+    """KfW heat-pump grant rate, sourced from the subsidy catalog when wired (Layer 5).
+
+    Case A (fossil → HP) maps to catalog component ``heat_pump_a`` (base 30% +
+    Klima-Geschwindigkeitsbonus 20% = 50%); Case B (old HP → new HP) maps to
+    ``heat_pump_b`` (base 30% only).  With no SubsidyContext injected the engine
+    falls back to the frozen constants so the F03 worked example still holds.
+    """
+    if subsidies is not None:
+        return subsidies.combined_rate("heat_pump_b" if is_old_hp else "heat_pump_a")
+    return KFW_OLDHP if is_old_hp else KFW_FOSSIL
 
 # ---------------------------------------------------------------------------
 # Sizing heuristic
@@ -212,18 +226,20 @@ def _capex_battery(
 def _capex_heatpump(
     *,
     heatpump_fixed_eur: float,
-    is_old_hp: bool,
+    hp_rate: float,
 ) -> tuple[float, float, float, str]:
-    """Return (gross, subsidy, after_subsidy, note) for the heat-pump layer."""
-    rate = KFW_OLDHP if is_old_hp else KFW_FOSSIL
-    subsidy = heatpump_fixed_eur * rate
+    """Return (gross, subsidy, after_subsidy, note) for the heat-pump layer.
+
+    ``hp_rate`` is resolved upstream from the subsidy catalog (Layer 5) or the
+    frozen constants — see :func:`_resolve_hp_rate`.
+    """
+    subsidy = heatpump_fixed_eur * hp_rate
     after = heatpump_fixed_eur - subsidy
-    label = "KfW 458 30%" if is_old_hp else "KfW 458 50%"
     return (
         heatpump_fixed_eur,
         subsidy,
         after,
-        f"€{heatpump_fixed_eur:,.0f} HP − {label} = €{after:,.0f}",
+        f"€{heatpump_fixed_eur:,.0f} HP − KfW 458 {hp_rate * 100:.0f}% = €{after:,.0f}",
     )
 
 
@@ -447,16 +463,24 @@ def build_ladder(
     nh: NormalisedHousehold,
     ctx: PricingContext,
     specific_yield: float,
+    subsidies: SubsidyContext | None = None,
 ) -> list[ScenarioResult]:
     """Build the cumulative savings ladder (2–4 rungs).
 
     Returns rungs in canonical order: solar → battery → heat pump → EV.
     HP rung is omitted if the household has a modern HP.
     EV rung is omitted if the household already has a charger.
+
+    ``subsidies`` is the Layer 5 catalog context (KfW/BAFA/VAT).  When omitted
+    the engine falls back to the frozen KfW constants, so existing test vectors
+    are unaffected.
     """
     # --- Heating baseline ---------------------------------------------------
     is_old_hp = _is_old_hp(nh)
     offer_hp = _should_offer_hp(nh)
+
+    # --- Heat-pump grant rate (Layer 5 catalog or constant fallback) --------
+    hp_rate = _resolve_hp_rate(subsidies, is_old_hp=is_old_hp)
 
     heating_baseline = compute_heating_baseline(
         heating_fuel=nh.heating_fuel,
