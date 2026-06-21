@@ -261,6 +261,11 @@ export default function IntakeScreen({ onComplete }: IntakeScreenProps) {
     runRecommend(household ?? DEMO_HOUSEHOLD, p);
   };
 
+  if (import.meta.env.DEV) {
+    (window as unknown as { __goViewing?: () => void }).__goViewing = () =>
+      handleParamsNext({ roofType: "gable", pitchDeg: 30, wallHeightM: 6 });
+  }
+
   const formHidden = step !== "intake";
 
   if (showOfferPage) {
